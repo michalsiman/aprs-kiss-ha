@@ -1,0 +1,65 @@
+send_message:
+  fields:
+    to:
+      required: true
+      example: OK1ABC-9
+      selector:
+        text:
+    text:
+      required: true
+      example: Hello from Home Assistant
+      selector:
+        text:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: aprs_kiss
+send_position:
+  fields:
+    latitude:
+      selector:
+        number:
+          min: -90
+          max: 90
+          step: any
+    longitude:
+      selector:
+        number:
+          min: -180
+          max: 180
+          step: any
+    comment:
+      selector:
+        text:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: aprs_kiss
+send_status:
+  fields:
+    text:
+      required: true
+      selector:
+        text:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: aprs_kiss
+send_unproto:
+  fields:
+    destination:
+      default: CQ
+      selector:
+        text:
+    text:
+      required: true
+      selector:
+        text:
+    path:
+      example: WIDE1-1
+      selector:
+        text:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: aprs_kiss

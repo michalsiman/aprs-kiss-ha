@@ -1,0 +1,12 @@
+[Unit]
+Description=KISS serial to TCP bridge (Quansheng F4HWN KISS TNC)
+After=network-online.target
+
+[Service]
+# Replace the device with the radio's /dev/serial/by-id/ path once it is plugged in.
+ExecStart=/usr/bin/python3 /usr/local/bin/kiss_tcp_bridge.py --device /dev/serial/by-id/REPLACE-ME --port 8001 --allow 192.168.0.24
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

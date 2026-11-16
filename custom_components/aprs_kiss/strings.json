@@ -1,0 +1,182 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Where is the KISS TNC?",
+        "menu_options": {
+          "tcp": "On the network (KISS over TCP)",
+          "serial": "On a serial port of this machine"
+        }
+      },
+      "tcp": {
+        "title": "KISS TCP",
+        "description": "Host and port of a KISS TCP server, for example the bridge on the machine the radio is plugged into, Direwolf or a TNC with network access. The connection is retried until it works, so the radio may be switched on later.",
+        "data": {
+          "host": "Host",
+          "port": "Port"
+        }
+      },
+      "serial": {
+        "title": "Serial port",
+        "data": {
+          "device": "Device, e.g. /dev/serial/by-id/…",
+          "baudrate": "Speed (baud)"
+        }
+      },
+      "station": {
+        "title": "Station",
+        "data": {
+          "callsign": "Callsign with SSID",
+          "path": "Digipeater path",
+          "symbol": "APRS symbol (table and code)",
+          "comment": "Position comment",
+          "accept_incoming": "Accept incoming packet connections"
+        },
+        "data_description": {
+          "callsign": "For example OK1SIM-7. Transmitting needs an amateur radio licence and stays off until you switch it on.",
+          "path": "WIDE1-1,WIDE2-1 is usual for APRS; empty for direct only.",
+          "symbol": "/- house, /> car, /[ person, /k truck."
+        }
+      }
+    },
+    "error": {
+      "invalid_callsign": "Not a callsign (up to 6 letters and digits, SSID 0–15).",
+      "invalid_path": "A path entry is not a callsign.",
+      "invalid_symbol": "Two characters: table (/ or \\) and symbol code."
+    },
+    "abort": {
+      "already_configured": "This callsign is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Station",
+        "data": {
+          "path": "Digipeater path",
+          "symbol": "APRS symbol (table and code)",
+          "comment": "Position comment",
+          "tracked_callsigns": "Callsigns to track on the map (comma separated)",
+          "accept_incoming": "Accept incoming packet connections",
+          "txdelay_ms": "TX delay sent to the TNC (0 = leave)"
+        }
+      }
+    },
+    "error": {
+      "invalid_path": "A path entry is not a callsign.",
+      "invalid_symbol": "Two characters: table (/ or \\) and symbol code."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "tnc_connected": {
+        "name": "TNC connected"
+      }
+    },
+    "switch": {
+      "transmit": {
+        "name": "Transmit"
+      }
+    },
+    "button": {
+      "send_position": {
+        "name": "Send position"
+      }
+    },
+    "sensor": {
+      "last_packet": {
+        "name": "Last packet from"
+      },
+      "last_message": {
+        "name": "Last message"
+      },
+      "stations_heard": {
+        "name": "Stations heard"
+      },
+      "packets_received": {
+        "name": "Packets received"
+      },
+      "frames_sent": {
+        "name": "Frames sent"
+      }
+    }
+  },
+  "services": {
+    "send_message": {
+      "name": "Send APRS message",
+      "description": "Sends a message and repeats it until the recipient acknowledges it.",
+      "fields": {
+        "to": {
+          "name": "To",
+          "description": "Callsign with SSID."
+        },
+        "text": {
+          "name": "Text",
+          "description": "Up to 67 characters."
+        },
+        "config_entry_id": {
+          "name": "Station",
+          "description": "Only needed with more TNCs."
+        }
+      }
+    },
+    "send_position": {
+      "name": "Send position",
+      "description": "Sends a position packet, Home Assistant's home by default.",
+      "fields": {
+        "latitude": {
+          "name": "Latitude",
+          "description": ""
+        },
+        "longitude": {
+          "name": "Longitude",
+          "description": ""
+        },
+        "comment": {
+          "name": "Comment",
+          "description": ""
+        },
+        "config_entry_id": {
+          "name": "Station",
+          "description": ""
+        }
+      }
+    },
+    "send_status": {
+      "name": "Send status",
+      "description": "Sends an APRS status report.",
+      "fields": {
+        "text": {
+          "name": "Text",
+          "description": ""
+        },
+        "config_entry_id": {
+          "name": "Station",
+          "description": ""
+        }
+      }
+    },
+    "send_unproto": {
+      "name": "Send unproto text",
+      "description": "Sends plain text in a UI frame, like a classic TNC in unproto mode.",
+      "fields": {
+        "destination": {
+          "name": "Destination",
+          "description": "CQ, ID, …"
+        },
+        "text": {
+          "name": "Text",
+          "description": ""
+        },
+        "path": {
+          "name": "Path",
+          "description": ""
+        },
+        "config_entry_id": {
+          "name": "Station",
+          "description": ""
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,182 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Kde je KISS TNC?",
+        "menu_options": {
+          "tcp": "V síti (KISS přes TCP)",
+          "serial": "Na sériovém portu tohoto počítače"
+        }
+      },
+      "tcp": {
+        "title": "KISS TCP",
+        "description": "Adresa a port KISS TCP serveru, třeba mostu na počítači, ke kterému je rádio připojené, Direwolfu nebo TNC se sítí. Připojení se zkouší pořád znovu, takže rádio můžeš zapnout i později.",
+        "data": {
+          "host": "Adresa",
+          "port": "Port"
+        }
+      },
+      "serial": {
+        "title": "Sériový port",
+        "data": {
+          "device": "Zařízení, např. /dev/serial/by-id/…",
+          "baudrate": "Rychlost (baud)"
+        }
+      },
+      "station": {
+        "title": "Stanice",
+        "data": {
+          "callsign": "Značka se SSID",
+          "path": "Cesta přes digipeatery",
+          "symbol": "APRS symbol (tabulka a znak)",
+          "comment": "Komentář k poloze",
+          "accept_incoming": "Přijímat příchozí packet spojení"
+        },
+        "data_description": {
+          "callsign": "Například OK1SIM-7. Vysílání vyžaduje radioamatérskou licenci a zůstane vypnuté, dokud ho nezapneš.",
+          "path": "Pro APRS se běžně používá WIDE1-1,WIDE2-1; prázdné jen přímo.",
+          "symbol": "/- dům, /> auto, /[ osoba, /k nákladní auto."
+        }
+      }
+    },
+    "error": {
+      "invalid_callsign": "Není to značka (až 6 písmen a číslic, SSID 0–15).",
+      "invalid_path": "Položka cesty není značka.",
+      "invalid_symbol": "Dva znaky: tabulka (/ nebo \\) a kód symbolu."
+    },
+    "abort": {
+      "already_configured": "Tahle značka už je nastavená."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Stanice",
+        "data": {
+          "path": "Cesta přes digipeatery",
+          "symbol": "APRS symbol (tabulka a znak)",
+          "comment": "Komentář k poloze",
+          "tracked_callsigns": "Značky sledované na mapě (oddělené čárkou)",
+          "accept_incoming": "Přijímat příchozí packet spojení",
+          "txdelay_ms": "TX delay pro TNC (0 = neměnit)"
+        }
+      }
+    },
+    "error": {
+      "invalid_path": "Položka cesty není značka.",
+      "invalid_symbol": "Dva znaky: tabulka (/ nebo \\) a kód symbolu."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "tnc_connected": {
+        "name": "TNC připojeno"
+      }
+    },
+    "switch": {
+      "transmit": {
+        "name": "Vysílání"
+      }
+    },
+    "button": {
+      "send_position": {
+        "name": "Odeslat polohu"
+      }
+    },
+    "sensor": {
+      "last_packet": {
+        "name": "Poslední paket od"
+      },
+      "last_message": {
+        "name": "Poslední zpráva"
+      },
+      "stations_heard": {
+        "name": "Slyšené stanice"
+      },
+      "packets_received": {
+        "name": "Přijaté pakety"
+      },
+      "frames_sent": {
+        "name": "Odeslané rámce"
+      }
+    }
+  },
+  "services": {
+    "send_message": {
+      "name": "Poslat APRS zprávu",
+      "description": "Pošle zprávu a opakuje ji, dokud ji příjemce nepotvrdí.",
+      "fields": {
+        "to": {
+          "name": "Komu",
+          "description": "Značka se SSID."
+        },
+        "text": {
+          "name": "Text",
+          "description": "Nejvýš 67 znaků."
+        },
+        "config_entry_id": {
+          "name": "Stanice",
+          "description": "Jen při více TNC."
+        }
+      }
+    },
+    "send_position": {
+      "name": "Odeslat polohu",
+      "description": "Odešle polohu, výchozí je domov Home Assistantu.",
+      "fields": {
+        "latitude": {
+          "name": "Zeměpisná šířka",
+          "description": ""
+        },
+        "longitude": {
+          "name": "Zeměpisná délka",
+          "description": ""
+        },
+        "comment": {
+          "name": "Komentář",
+          "description": ""
+        },
+        "config_entry_id": {
+          "name": "Stanice",
+          "description": ""
+        }
+      }
+    },
+    "send_status": {
+      "name": "Odeslat status",
+      "description": "Odešle APRS status.",
+      "fields": {
+        "text": {
+          "name": "Text",
+          "description": ""
+        },
+        "config_entry_id": {
+          "name": "Stanice",
+          "description": ""
+        }
+      }
+    },
+    "send_unproto": {
+      "name": "Poslat unproto text",
+      "description": "Pošle prostý text v UI rámci, jako klasický TNC v režimu unproto.",
+      "fields": {
+        "destination": {
+          "name": "Cíl",
+          "description": "CQ, ID, …"
+        },
+        "text": {
+          "name": "Text",
+          "description": ""
+        },
+        "path": {
+          "name": "Cesta",
+          "description": ""
+        },
+        "config_entry_id": {
+          "name": "Stanice",
+          "description": ""
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,240 @@
+"""APRS & Packet: APRS and a packet radio terminal through a KISS TNC."""
+
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+from typing import Any
+
+import voluptuous as vol
+
+from homeassistant.components import frontend, panel_custom, websocket_api
+from homeassistant.components.http import StaticPathConfig
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers import config_validation as cv
+
+from .const import DOMAIN, PANEL_URL
+from .hub import Hub
+from .station import TransmitRefused
+
+_LOGGER = logging.getLogger(__name__)
+
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.BUTTON, Platform.DEVICE_TRACKER, Platform.SENSOR, Platform.SWITCH]
+PANEL_PATH = "aprs-packet"
+
+type AprsKissConfigEntry = ConfigEntry[Hub]
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: AprsKissConfigEntry) -> bool:
+    hub = Hub(hass, entry)
+    entry.runtime_data = hub
+    await hub.async_start()
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(_reload))
+    bucket = hass.data.setdefault(DOMAIN, {})
+    if not bucket.get("registered"):
+        bucket["registered"] = True
+        _register_services(hass)
+        _register_ws(hass)
+        await _register_panel(hass)
+    return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: AprsKissConfigEntry) -> bool:
+    ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    await entry.runtime_data.async_stop()
+    return ok
+
+
+async def _reload(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
+def _hub(hass: HomeAssistant, entry_id: str | None = None) -> Hub:
+    for entry in hass.config_entries.async_loaded_entries(DOMAIN):
+        if entry_id in (None, entry.entry_id):
+            return entry.runtime_data
+    raise ServiceValidationError("APRS & Packet is not set up")
+
+
+async def _guard(coro):
+    try:
+        return await coro
+    except TransmitRefused as err:
+        raise HomeAssistantError(f"Not sent: {err}") from err
+    except (ConnectionError, ValueError) as err:
+        raise HomeAssistantError(f"Not sent: {err}") from err
+
+
+# ─── services ─────────────────────────────────────────────────────────────
+
+def _register_services(hass: HomeAssistant) -> None:
+    entry_field = {vol.Optional("config_entry_id"): cv.string}
+
+    async def send_message(call: ServiceCall) -> ServiceResponse:
+        hub = _hub(hass, call.data.get("config_entry_id"))
+        return await _guard(hub.send_aprs_message(call.data["to"], call.data["text"]))
+
+    async def send_position(call: ServiceCall) -> None:
+        hub = _hub(hass, call.data.get("config_entry_id"))
+        lat = call.data.get("latitude", hass.config.latitude)
+        lon = call.data.get("longitude", hass.config.longitude)
+        await _guard(hub.station.send_position(lat, lon, call.data.get("comment")))
+
+    async def send_status(call: ServiceCall) -> None:
+        hub = _hub(hass, call.data.get("config_entry_id"))
+        await _guard(hub.station.send_status(call.data["text"]))
+
+    async def send_unproto(call: ServiceCall) -> None:
+        hub = _hub(hass, call.data.get("config_entry_id"))
+        await _guard(hub.send_unproto(call.data.get("destination", "CQ"), call.data["text"], call.data.get("path", "")))
+
+    hass.services.async_register(
+        DOMAIN, "send_message", send_message,
+        vol.Schema({**entry_field, vol.Required("to"): cv.string, vol.Required("text"): cv.string}),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    hass.services.async_register(
+        DOMAIN, "send_position", send_position,
+        vol.Schema({**entry_field, vol.Optional("latitude"): cv.latitude, vol.Optional("longitude"): cv.longitude,
+                    vol.Optional("comment"): cv.string}),
+    )
+    hass.services.async_register(
+        DOMAIN, "send_status", send_status, vol.Schema({**entry_field, vol.Required("text"): cv.string}))
+    hass.services.async_register(
+        DOMAIN, "send_unproto", send_unproto,
+        vol.Schema({**entry_field, vol.Optional("destination", default="CQ"): cv.string,
+                    vol.Required("text"): cv.string, vol.Optional("path", default=""): cv.string}),
+    )
+
+
+# ─── WebSocket API for the panel ──────────────────────────────────────────
+
+def _register_ws(hass: HomeAssistant) -> None:
+    for handler in (ws_state, ws_connect, ws_disconnect, ws_send_text, ws_send_unproto, ws_send_message, ws_set_tx):
+        websocket_api.async_register_command(hass, handler)
+
+
+def _error(connection, msg_id, err: Exception) -> None:
+    connection.send_error(msg_id, "not_sent", str(err))
+
+
+@websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/state", vol.Optional("entry_id"): str})
+@websocket_api.async_response
+async def ws_state(hass, connection, msg):
+    hub = _hub(hass, msg.get("entry_id"))
+    connection.send_result(msg["id"], {
+        "entry_id": hub.entry.entry_id,
+        "callsign": str(hub.me),
+        "tnc_connected": hub.connection.connected,
+        "tx_enabled": hub.station.tx_enabled,
+        "path": hub.conf.get("path", ""),
+        "monitor": list(hub.monitor),
+        "terminal": list(hub.terminal),
+        "sessions": hub.session_states(),
+        "messages": [{**m, "state": hub.message_state(m.get("msg_no")) if m["direction"] == "out" else None}
+                     for m in hub.messages],
+        "heard": list(hub.station.heard.values())[-100:],
+    })
+
+
+@websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/connect", vol.Required("remote"): str,
+                                  vol.Optional("path", default=""): str, vol.Optional("entry_id"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_connect(hass, connection, msg):
+    try:
+        _hub(hass, msg.get("entry_id")).connect(msg["remote"], msg["path"])
+        connection.send_result(msg["id"], {})
+    except (TransmitRefused, ConnectionError, ValueError) as err:
+        _error(connection, msg["id"], err)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/disconnect", vol.Required("remote"): str,
+                                  vol.Optional("entry_id"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_disconnect(hass, connection, msg):
+    try:
+        _hub(hass, msg.get("entry_id")).disconnect(msg["remote"])
+        connection.send_result(msg["id"], {})
+    except ValueError as err:
+        _error(connection, msg["id"], err)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/send_text", vol.Required("remote"): str,
+                                  vol.Required("text"): str, vol.Optional("entry_id"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_send_text(hass, connection, msg):
+    try:
+        _hub(hass, msg.get("entry_id")).send_text(msg["remote"], msg["text"])
+        connection.send_result(msg["id"], {})
+    except (ConnectionError, ValueError) as err:
+        _error(connection, msg["id"], err)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/send_unproto", vol.Required("text"): str,
+                                  vol.Optional("destination", default="CQ"): str, vol.Optional("path", default=""): str,
+                                  vol.Optional("entry_id"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_send_unproto(hass, connection, msg):
+    try:
+        await _hub(hass, msg.get("entry_id")).send_unproto(msg["destination"], msg["text"], msg["path"])
+        connection.send_result(msg["id"], {})
+    except (TransmitRefused, ConnectionError, ValueError) as err:
+        _error(connection, msg["id"], err)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/send_message", vol.Required("to"): str,
+                                  vol.Required("text"): str, vol.Optional("entry_id"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_send_message(hass, connection, msg):
+    try:
+        result = await _hub(hass, msg.get("entry_id")).send_aprs_message(msg["to"], msg["text"])
+        connection.send_result(msg["id"], result)
+    except (TransmitRefused, ConnectionError, ValueError) as err:
+        _error(connection, msg["id"], err)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/set_tx", vol.Required("enabled"): bool,
+                                  vol.Optional("entry_id"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_set_tx(hass, connection, msg):
+    hub = _hub(hass, msg.get("entry_id"))
+    hub.station.tx_enabled = msg["enabled"]
+    hub._on_update()  # noqa: SLF001 - the switch entity follows
+    connection.send_result(msg["id"], {"tx_enabled": hub.station.tx_enabled})
+
+
+# ─── panel ────────────────────────────────────────────────────────────────
+
+async def _register_panel(hass: HomeAssistant) -> None:
+    path = Path(__file__).parent / "frontend" / "aprs-kiss-panel.js"
+    await hass.http.async_register_static_paths([StaticPathConfig(PANEL_URL, str(path), cache_headers=False)])
+    version = await hass.async_add_executor_job(lambda: str(int(path.stat().st_mtime)) if path.exists() else "0")
+    await panel_custom.async_register_panel(
+        hass,
+        webcomponent_name="aprs-kiss-panel",
+        frontend_url_path=PANEL_PATH,
+        module_url=f"{PANEL_URL}?v={version}",
+        sidebar_title="APRS & Packet",
+        sidebar_icon="mdi:radio-handheld",
+        require_admin=True,
+        config={},
+    )
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    if not hass.config_entries.async_entries(DOMAIN) or all(e.entry_id == entry.entry_id for e in hass.config_entries.async_entries(DOMAIN)):
+        frontend.async_remove_panel(hass, PANEL_PATH)
+        hass.data.get(DOMAIN, {}).pop("registered", None)
+
+
+__all__: list[Any] = ["async_setup_entry", "async_unload_entry"]
