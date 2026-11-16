@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.1] - 2026-11-16
+
+- The whole panel follows Home Assistant's theme, light or dark: the terminal, the monitor and the map labels no longer have fixed dark colours.
+- New screenshots of all four tabs, light and dark (the README shows the one matching your GitHub theme).
+
 ## [0.2.0] - 2026-11-16
 
 - Everything the panel uses comes from Home Assistant: Leaflet is bundled with the integration, and map tiles come through Home Assistant's tile proxy (`/api/map_tiles`, HA 2026.11+) instead of the browser fetching CDN files and OpenStreetMap tiles itself (which OpenStreetMap blocked).

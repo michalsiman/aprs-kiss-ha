@@ -15,22 +15,24 @@ It was built and tested for a **Quansheng UV-K1 / UV-K5 V3** running the **F4HWN
 
 <table>
 <tr>
+<td width="50%"><picture><source media="(prefers-color-scheme: light)" srcset="assets/chat-light.png"><img src="assets/chat.png" alt="Chat window"></picture></td>
 <td width="50%"><picture><source media="(prefers-color-scheme: light)" srcset="assets/terminal-light.png"><img src="assets/terminal.png" alt="Packet radio terminal connected to a BBS"></picture></td>
-<td width="50%"><picture><source media="(prefers-color-scheme: light)" srcset="assets/aprs-light.png"><img src="assets/aprs.png" alt="APRS map, messages and stations heard with weather"></picture></td>
 </tr>
 <tr>
+<td><b>Chat</b>: type and press Enter; everyone's text on the frequency below.</td>
 <td><b>Terminal</b>: connected to a BBS, commands and answers.</td>
+</tr>
+<tr>
+<td><picture><source media="(prefers-color-scheme: light)" srcset="assets/aprs-light.png"><img src="assets/aprs.png" alt="APRS map, messages and stations heard with weather"></picture></td>
+<td><picture><source media="(prefers-color-scheme: light)" srcset="assets/monitor-light.png"><img src="assets/monitor.png" alt="Frame monitor"></picture></td>
+</tr>
+<tr>
 <td><b>APRS</b>: map of the stations heard, messages with their acknowledgement, weather.</td>
-</tr>
-<tr>
-<td colspan="2"><picture><source media="(prefers-color-scheme: light)" srcset="assets/monitor-light.png"><img src="assets/monitor.png" alt="Frame monitor"></picture></td>
-</tr>
-<tr>
-<td colspan="2"><b>Monitor</b>: every frame, received (&lt;&lt;) and sent (&gt;&gt;), with AX.25 control fields.</td>
+<td><b>Monitor</b>: every frame, received (&lt;&lt;) and sent (&gt;&gt;), with AX.25 control fields.</td>
 </tr>
 </table>
 
-*The screenshots were taken with the built-in simulator (see [Testing without a radio](#testing-without-a-radio)); the stations are made up.*
+*The panel follows Home Assistant's theme, light or dark; the screenshots follow your GitHub theme. They were taken with the built-in simulator (see [Testing without a radio](#testing-without-a-radio)); the stations are made up.*
 
 ## Contents
 

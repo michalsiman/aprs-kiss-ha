@@ -168,7 +168,7 @@ class AprsKissPanel extends HTMLElement {
         button.btn { font: inherit; padding: 7px 14px; border-radius: 8px; border: none; background: var(--primary-color); color: var(--text-primary-color, #fff); cursor: pointer; }
         button.btn.secondary { background: var(--secondary-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color); }
         button.btn:disabled { opacity: 0.5; cursor: default; }
-        pre { flex: 1; min-height: 200px; margin: 0; overflow: auto; padding: 10px 12px; border-radius: 10px; background: #111; color: #d0d0d0; font: 13px/1.45 ui-monospace, 'DejaVu Sans Mono', Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+        pre { flex: 1; min-height: 200px; margin: 0; overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--code-editor-background-color, var(--card-background-color)); color: var(--primary-text-color); border: 1px solid var(--divider-color); font: 13px/1.45 ui-monospace, 'DejaVu Sans Mono', Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
         .chatlog { flex: 1; min-height: 200px; overflow: auto; padding: 8px 10px; border-radius: 10px; background: var(--card-background-color); border: 1px solid var(--divider-color); font-size: 14px; }
         .chatline { padding: 3px 0; line-height: 1.4; word-break: break-word; }
         .chatline .t { color: var(--secondary-text-color); font-size: 12px; margin-right: 6px; font-variant-numeric: tabular-nums; }
@@ -176,7 +176,7 @@ class AprsKissPanel extends HTMLElement {
         .chatline.out .c { color: var(--primary-color); }
         .chatline.aprs { color: var(--secondary-text-color); font-size: 13px; }
         .chatline .to { color: var(--secondary-text-color); font-size: 12px; margin-right: 4px; }
-        pre .tx { color: #4fc3f7; } pre .st { color: #ffb74d; font-style: italic; } pre .out { color: #81c784; }
+        pre .tx { color: var(--primary-color); } pre .st { color: var(--warning-color, #ef6c00); font-style: italic; } pre .out { color: var(--success-color, #2e7d32); }
         .line { display: flex; gap: 8px; } .line input { flex: 1; font-family: ui-monospace, monospace; }
         .hint { font-size: 13px; color: var(--secondary-text-color); }
         .error { color: var(--error-color, #db4437); font-size: 13px; }
@@ -192,7 +192,7 @@ class AprsKissPanel extends HTMLElement {
         th { color: var(--secondary-text-color); font-weight: 500; }
         .map { height: 380px; border-radius: 10px; overflow: hidden; }
         .leaflet-container { background: var(--secondary-background-color); font: inherit; }
-        .leaflet-tooltip.call-label { background: rgba(0,0,0,.65); color: #fff; border: none; box-shadow: none; padding: 1px 5px; font-size: 11px; }
+        .leaflet-tooltip.call-label { background: var(--card-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color) !important; box-shadow: 0 1px 3px rgba(0,0,0,.3); padding: 1px 5px; font-size: 11px; }
         .wx { display: inline-block; }
         td:nth-child(-n+2) { white-space: nowrap; }
         .call-label::before { display: none; }
