@@ -43,6 +43,22 @@ def licence_confirmed(text: str | None) -> bool:
     return plain in LICENCE_STATEMENTS
 
 
+def decode_line(raw: bytes) -> tuple[str, bool]:
+    """An APRS-IS line as text, and whether it looks garbled.
+
+    Lines are UTF-8 nowadays (Czech comments and the like); older software sends
+    Latin-1. A line that is neither, with several stray high bytes or control
+    characters, is usually a packet a (LoRa) iGate received with bit errors.
+    """
+    try:
+        return raw.decode("utf-8"), False
+    except UnicodeDecodeError:
+        text = raw.decode("latin-1")
+    high = sum(1 for b in raw if b >= 0x80)
+    control = any(b < 0x20 or 0x7F <= b < 0xA0 for b in raw)
+    return text, control or high >= 3
+
+
 def passcode(callsign: str) -> int:
     """The APRS-IS passcode of a callsign (the SSID does not matter)."""
     call = callsign.split("-")[0].upper()
@@ -91,7 +107,7 @@ class AprsIsClient:
         code: int,
         filter_: str,
         software: str,
-        on_line: Callable[[str], None],
+        on_line: Callable[[str, bool], None],
         on_state: Callable[[bool], None],
     ) -> None:
         self.host = host
@@ -156,7 +172,7 @@ class AprsIsClient:
                     raw = await asyncio.wait_for(reader.readline(), KEEPALIVE * 2)
                     if not raw:
                         raise ConnectionResetError("server closed the connection")
-                    line = raw.decode("latin-1").rstrip("\r\n")
+                    line, garbled = decode_line(raw.rstrip(b"\r\n"))
                     if line.startswith("#"):
                         if "logresp" in line:
                             self.verified = " verified" in line and "unverified" not in line
@@ -166,7 +182,7 @@ class AprsIsClient:
                         continue
                     self.lines_in += 1
                     try:
-                        self._on_line(line)
+                        self._on_line(line, garbled)
                     except Exception:  # noqa: BLE001
                         _LOGGER.exception("Error handling an APRS-IS line")
             except (OSError, asyncio.TimeoutError, ConnectionError) as err:

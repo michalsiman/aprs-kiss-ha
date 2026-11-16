@@ -380,6 +380,8 @@ class AprsKissPanel extends HTMLElement {
         }
         .page.kbd .hint { display: none; }
         .page.kbd pre, .page.kbd .chatlog { min-height: 60px; }
+        .aprs-pop .leaflet-popup-content { margin: 8px 10px; font-size: 12px; line-height: 1.35; word-break: break-word; }
+        .aprs-pop .leaflet-popup-content small { font-size: 11px; color: #666; }
         .leaflet-container { background: var(--secondary-background-color); font: inherit; }
         .leaflet-tooltip.call-label { background: var(--card-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color) !important; box-shadow: 0 1px 3px rgba(0,0,0,.3); padding: 1px 5px; font-size: 11px; }
         .wx { display: inline-block; }
@@ -733,7 +735,7 @@ class AprsKissPanel extends HTMLElement {
     return `<table>
       <tr><th>Call</th><th>${t.lastHeard}</th><th class="pos">${t.position}</th><th>${t.comment}</th></tr>
       ${heard.map((h) => `<tr><td>${h.last_rf ? '' : `<span title="${t.viaIs}">🌐 </span>`}${esc(h.call)}</td><td>${time(h.last_heard)}</td>
-        <td class="pos">${h.latitude != null ? `${h.latitude.toFixed(4)}, ${h.longitude.toFixed(4)}` : ''}</td><td>${h.weather ? `<span class="wx">🌡 ${esc(wxText(h.weather))}</span><br>` : ''}${esc(h.comment || h.status || '')}</td></tr>`).join('')}
+        <td class="pos">${h.latitude != null ? `${h.latitude.toFixed(4)}, ${h.longitude.toFixed(4)}` : ''}</td><td>${wxText(h.weather) ? `<span class="wx">🌡 ${esc(wxText(h.weather))}</span><br>` : ''}${esc(h.comment || h.status || '')}</td></tr>`).join('')}
     </table>${heard.some((h) => !h.last_rf) ? `<div class="hint">${t.isLegend}</div>` : ''}`;
   }
 
@@ -841,6 +843,10 @@ AprsKissPanel.prototype._renderMap = async function renderMap(el, heard) {
   setTimeout(() => map.invalidateSize(), 100);
 };
 
+// A small popup that fits a phone's map: it scrolls inside when long, and the map
+// moves so the popup stays clear of the zoom buttons (top left).
+const POPUP = { className: 'aprs-pop', maxWidth: 230, maxHeight: 150, autoPanPaddingTopLeft: [52, 10], autoPanPaddingBottomRight: [10, 30] };
+
 AprsKissPanel.prototype._drawMarkers = function drawMarkers(heard) {
   const L = this._L;
   const map = this._map;
@@ -860,7 +866,7 @@ AprsKissPanel.prototype._drawMarkers = function drawMarkers(heard) {
     const rf = !!h.last_rf;
     L.circleMarker(p, { radius: rf ? 7 : 6, color: '#fff', weight: 2, fillColor: rf ? '#fb8c00' : '#8e24aa', fillOpacity: rf ? 1 : 0.85 })
       .bindTooltip(`${rf ? '' : '🌐 '}${esc(h.call)}`, { permanent: true, direction: 'right', className: 'call-label' })
-      .bindPopup(`<b>${esc(h.call)}</b><br>${time(h.last_heard)}${rf ? '' : '<br>🌐 ' + this._t.viaIs}${h.weather ? '<br>🌡 ' + esc(wxText(h.weather)) : ''}${h.comment ? '<br>' + esc(h.comment) : ''}${h.path?.length ? '<br><small>' + esc(h.path.join(',')) + '</small>' : ''}`)
+      .bindPopup(`<b>${esc(h.call)}</b><br>${time(h.last_heard)}${rf ? '' : '<br>🌐 ' + this._t.viaIs}${wxText(h.weather) ? '<br>🌡 ' + esc(wxText(h.weather)) : ''}${h.comment ? '<br>' + esc(h.comment) : ''}${h.path?.length ? '<br><small>' + esc(h.path.join(',')) + '</small>' : ''}`, POPUP)
       .addTo(this._markers);
   }
   if (this._mapView) return;  // the user's view wins

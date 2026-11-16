@@ -216,6 +216,22 @@ class StationTest(unittest.IsolatedAsyncioTestCase):
         # A later internet copy keeps the radio path.
         st.handle_is_packet({"from": "OK1XYZ", "format": "uncompressed", "raw": "x", "path": ["TCPIP*"]})
         self.assertEqual(st.heard["OK1XYZ"]["path"], ["WIDE1-1"])
+
+    async def test_internet_copies_and_garbled_packets_keep_the_first_copy(self):
+        st = station.Station(station.StationConfig("OK1SIM-7"), None, lambda t: {}, lambda p: None,
+                             lambda m: None, lambda: None, lambda: 1)
+        first = {"from": "OK1JRA-20", "format": "compressed", "comment": "SOLAR DIGI test",
+                 "weather": {"temperature": 6.1}, "raw": "a", "path": ["WIDE1-1", "qAR", "OK1KUN-2"]}
+        st.handle_is_packet(first)
+        st.handle_is_packet({"from": "OK1JRA-20", "format": "compressed", "comment": "DR:-120 DS:-0.50 !G...",
+                             "weather": {}, "raw": "b", "path": ["WIDE1-1", "qAS", "OK1RPL-15"]})
+        self.assertEqual(st.heard["OK1JRA-20"]["comment"], "SOLAR DIGI test")
+        self.assertEqual(st.heard["OK1JRA-20"]["count"], 2)
+        st.heard["OK1JRA-20"]["last_is"] -= 120  # the next beacon, two minutes later, but garbled
+        st.handle_is_packet({"from": "OK1JRA-20", "format": "compressed", "comment": "S\xe5\xc8e", "raw": "c",
+                             "path": ["OK0BR-10*"], "garbled": True})
+        self.assertEqual(st.heard["OK1JRA-20"]["comment"], "SOLAR DIGI test")
+        self.assertEqual(st.heard["OK1JRA-20"]["weather"], {"temperature": 6.1})
         await st.close()
 
     async def test_transmit_switched_off(self):
@@ -250,6 +266,11 @@ aprsis = _load("aprsis")
 
 
 class AprsIsTest(unittest.TestCase):
+    def test_decode_line(self):
+        self.assertEqual(aprsis.decode_line("Plzeň".encode()), ("Plzeň", False))
+        self.assertEqual(aprsis.decode_line(b"21\xb0C"), ("21°C", False))  # Latin-1 degree sign
+        self.assertTrue(aprsis.decode_line(b"!G.../...t043S\xe5\xc8e\xee@\xc2p\xedI test\xfd\xa1-!v")[1])
+
     def test_licence_statement(self):
         ok = aprsis.licence_confirmed
         self.assertTrue(ok("mám platnou radioamatérskou licenci"))

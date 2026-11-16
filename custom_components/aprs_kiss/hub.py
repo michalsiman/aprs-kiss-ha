@@ -225,10 +225,12 @@ class Hub:
         self._on_update()
 
     @callback
-    def _on_is_line(self, line: str) -> None:
+    def _on_is_line(self, line: str, garbled: bool = False) -> None:
         self._monitor(f"[IS] {line}")
         packet = parse(line)
         packet["raw"] = line
+        if garbled:
+            packet["garbled"] = True
         head = line.partition(":")[0]
         packet["path"] = head.split(",")[1:] or ["TCPIP"]
         src = packet.get("from", "")

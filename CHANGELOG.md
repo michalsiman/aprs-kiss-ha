@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3] - 2026-11-16
+
+- Stations from APRS-IS: when several iGates send the same packet within a minute, the first copy is kept (later copies often carry an iGate's own additions, such as LoRa signal reports that break the weather data); packets received with bit errors no longer overwrite a station's comment, weather or position.
+- APRS-IS lines are read as UTF-8 (Latin-1 as a fallback), so accented letters in comments show correctly.
+- No lone 🌡 for a station without weather data.
+- APRS map: the station popup is smaller (it scrolls inside when long) and the map moves so it stays clear of the zoom buttons; on a phone it no longer covers the map.
+
 ## [0.3.2] - 2026-11-16
 
 - Chat is plain packet chat, nothing of APRS: no *To* and *via* fields, the text goes out as it is (no `CALL:` prefix, your callsign is the frame's sender) in a UI frame to `CQ`, direct, without digipeaters. APRS packets never appear in the chat, so the *Show APRS packets* switch is gone.

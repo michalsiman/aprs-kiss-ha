@@ -30,6 +30,7 @@ RETRY_DELAYS = (30, 60, 120, 240)
 MIN_TX_GAP = 3.0
 MAX_TX_PER_10_MIN = 30
 MAX_HEARD = 500
+IS_COPIES_SECONDS = 60  # copies of one packet through several iGates arrive within this time
 
 
 @dataclass
@@ -159,14 +160,21 @@ class Station:
         call = packet["from"]
         entry = self.heard.pop(call, {"call": call, "count": 0})
         entry["count"] += 1
+        previous = max(entry.get("last_is") or 0, entry.get("last_rf") or 0)
         entry["last_heard"] = now
         entry[f"last_{via}"] = now
+        if packet.get("garbled") or (via == "is" and previous and now - previous < IS_COPIES_SECONDS):
+            # A packet received with bit errors, or another copy of the same packet that a
+            # different iGate sent a few seconds later (often with its own additions, such
+            # as LoRa signal reports): keep what the first copy said.
+            self.heard[call] = entry
+            return
         if via == "rf" or "last_rf" not in entry:
             # The radio path says more about the station than an internet path.
             entry["last_raw"] = packet["raw"]
             entry["path"] = packet["path"]
         for k in ("latitude", "longitude", "symbol", "symbol_table", "comment", "speed", "course", "altitude", "status", "weather"):
-            if packet.get(k) is not None:
+            if packet.get(k) not in (None, {}, ""):
                 entry[k] = packet[k]
         weather = packet.get("weather")
         if isinstance(weather, dict):
