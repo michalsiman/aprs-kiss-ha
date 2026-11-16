@@ -35,7 +35,17 @@ It was built and tested for a **Quansheng UV-K1 / UV-K5 V3** running the **F4HWN
 <td colspan="2"><picture><source media="(prefers-color-scheme: light)" srcset="assets/settings-light.png"><img src="assets/settings.png" alt="Settings: station, icon, APRS-IS and iGate"></picture></td>
 </tr>
 <tr>
-<td colspan="2"><b>Settings</b>: callsign and SSID with their usual meaning, the APRS icon from the common symbols, beacon, tracked stations, APRS-IS and iGate.</td>
+<td colspan="2"><b>Settings</b>: callsign and SSID with their usual meaning, the APRS icon from the common symbols, beacon, tracked stations, APRS-IS (with its password) and iGate.</td>
+</tr>
+</table>
+
+On a phone (the Home Assistant app or a mobile browser) the panel fits the screen: the header with the ☰ button (Home Assistant's sidebar), the TNC and Transmit status and the tabs (⚙️ is Settings) always stays on top, also with the keyboard open; only the content below it scrolls.
+
+<table>
+<tr>
+<td width="25%"><picture><source media="(prefers-color-scheme: light)" srcset="assets/phone-chat-light.png"><img src="assets/phone-chat.png" alt="Chat on a phone"></picture></td>
+<td width="25%"><picture><source media="(prefers-color-scheme: light)" srcset="assets/phone-aprs-light.png"><img src="assets/phone-aprs.png" alt="APRS map on a phone"></picture></td>
+<td width="50%"></td>
 </tr>
 </table>
 
@@ -278,7 +288,7 @@ actions:
 
 APRS-IS is the internet side of APRS ([aprs-is.net](https://www.aprs-is.net)); [aprs.fi](https://aprs.fi) shows what reaches it. In **Settings → APRS-IS**:
 
-1. **Connect to APRS-IS**: server `euro.aprs2.net` (or `rotate.aprs2.net`, `noam.aprs2.net`, …), port 14580. The **passcode** is computed from your callsign automatically; enter one only if yours differs. The status line shows *logged in* and the server once the server has verified the passcode.
+1. **Connect to APRS-IS**: server `euro.aprs2.net` (or `rotate.aprs2.net`, `noam.aprs2.net`, …), port 14580. The **APRS-IS password (passcode)** is computed from your callsign automatically when the field is empty; enter yours if you were given a different one (*Show* reveals what you typed). The status line shows *logged in* and the server once the server has verified the passcode.
 2. **Receive packets within … km**: a range filter around Home Assistant's home for the internet traffic the integration receives.
 3. **Messages to you from the internet** arrive like radio messages (event `aprs_kiss_message`, sensor *Last message*) and are acknowledged over the internet.
 4. **Your own packets** (position, status, messages) go to APRS-IS as well while connected, also with transmitting off: Home Assistant can then message APRS stations through the internet alone.

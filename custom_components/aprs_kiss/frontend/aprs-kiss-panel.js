@@ -32,9 +32,12 @@ const SYMBOLS = [
   ['/o', '🏢', 'EOC (emergency centre)', 'Krizové centrum'], ['/E', '👁️', 'Eyeball (event)', 'Akce, pozorování'], ['/$', '☎️', 'Phone', 'Telefon'],
 ];
 
+// Material Design Icons "cog" (Apache 2.0), the icon Home Assistant uses for settings.
+const COG = 'M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z';
+
 const TEXTS = {
   en: {
-    settings: 'Settings', callsign: 'Callsign', ssid: 'SSID', symbol: 'Icon (APRS symbol)', comment: 'Position comment', path: 'Digipeater path', beacon: 'Send position every (minutes, 0 = off, at least 10)', tracked: 'Callsigns to track on the map', incoming: 'Accept incoming packet connections', txdelay: 'TX delay sent to the TNC (ms, 0 = leave)', station: 'Station', aprsis: 'APRS-IS (internet)', aprsisOn: 'Connect to APRS-IS', server: 'Server', port: 'Port', passcode: 'Passcode (empty = computed from the callsign)', radius: 'Receive packets within (km of home, 0 = none)', igateRx: 'iGate: send packets heard on the radio to APRS-IS', igateTx: 'iGate: send internet messages to local stations by radio', save: 'Save', saved: 'Saved; the integration restarts with the new settings.', isState: 'APRS-IS', verified: 'logged in', unverified: 'connected, not verified (check the passcode)', disconnectedIs: 'not connected', passAuto: 'computed automatically', igateHint: 'Sending to APRS-IS needs no transmitter; gating to the radio needs Transmit on and a licence.', ssidHint: 'Usual meanings of the SSID:',
+    settings: 'Settings', callsign: 'Callsign', ssid: 'SSID', symbol: 'Icon (APRS symbol)', comment: 'Position comment', path: 'Digipeater path', beacon: 'Send position every (minutes, 0 = off, at least 10)', tracked: 'Callsigns to track on the map', incoming: 'Accept incoming packet connections', txdelay: 'TX delay sent to the TNC (ms, 0 = leave)', station: 'Station', aprsis: 'APRS-IS (internet)', aprsisOn: 'Connect to APRS-IS', server: 'Server', port: 'Port', passcode: 'APRS-IS password (passcode)', show: 'Show', hide: 'Hide', passHint: 'Empty: computed from your callsign (the standard APRS-IS passcode). Enter your own if you were given a different one.', passOwn: 'Your own passcode is saved. Clear the field to compute it from the callsign.', radius: 'Receive packets within (km of home, 0 = none)', igateRx: 'iGate: send packets heard on the radio to APRS-IS', igateTx: 'iGate: send internet messages to local stations by radio', save: 'Save', saved: 'Saved; the integration restarts with the new settings.', isState: 'APRS-IS', verified: 'logged in', unverified: 'connected, not verified (check the passcode)', disconnectedIs: 'not connected', passAuto: 'computed automatically', igateHint: 'Sending to APRS-IS needs no transmitter; gating to the radio needs Transmit on and a licence.', ssidHint: 'Usual meanings of the SSID:',
     chat: 'Chat', showAprs: 'Show APRS packets', chatHint: 'Plain text to everyone: Enter sends it as a UI frame, starting with your callsign.', chatEmpty: 'Nothing heard yet.', chatTo: 'To',
     terminal: 'Terminal', monitor: 'Monitor', aprs: 'APRS', tnc: 'TNC', online: 'connected', offline: 'not connected',
     tx: 'Transmit', on: 'on', off: 'off', connectTo: 'Connect to', via: 'via', connect: 'Connect', disconnect: 'Disconnect',
@@ -45,7 +48,7 @@ const TEXTS = {
     txOffHint: 'Transmitting is off. Switch it on to connect or send.', state: { pending: 'waiting for ack', acked: 'acknowledged', rejected: 'rejected', failed: 'no ack', sent: 'sent' },
   },
   cs: {
-    settings: 'Nastavení', callsign: 'Značka', ssid: 'SSID', symbol: 'Ikona (APRS symbol)', comment: 'Komentář k poloze', path: 'Cesta přes digipeatery', beacon: 'Posílat polohu každých (minut, 0 = ne, nejméně 10)', tracked: 'Značky sledované na mapě', incoming: 'Přijímat příchozí packet spojení', txdelay: 'TX delay pro TNC (ms, 0 = neměnit)', station: 'Stanice', aprsis: 'APRS-IS (internet)', aprsisOn: 'Připojit se k APRS-IS', server: 'Server', port: 'Port', passcode: 'Passcode (prázdné = spočítat ze značky)', radius: 'Přijímat pakety do (km od domova, 0 = žádné)', igateRx: 'iGate: posílat pakety slyšené rádiem do APRS-IS', igateTx: 'iGate: zprávy z internetu pro místní stanice vysílat rádiem', save: 'Uložit', saved: 'Uloženo; integrace se restartuje s novým nastavením.', isState: 'APRS-IS', verified: 'přihlášeno', unverified: 'připojeno, neověřeno (zkontroluj passcode)', disconnectedIs: 'nepřipojeno', passAuto: 'spočítá se automaticky', igateHint: 'Posílání do APRS-IS nepotřebuje vysílač; brána do rádia potřebuje zapnuté vysílání a licenci.', ssidHint: 'Obvyklé významy SSID:',
+    settings: 'Nastavení', callsign: 'Značka', ssid: 'SSID', symbol: 'Ikona (APRS symbol)', comment: 'Komentář k poloze', path: 'Cesta přes digipeatery', beacon: 'Posílat polohu každých (minut, 0 = ne, nejméně 10)', tracked: 'Značky sledované na mapě', incoming: 'Přijímat příchozí packet spojení', txdelay: 'TX delay pro TNC (ms, 0 = neměnit)', station: 'Stanice', aprsis: 'APRS-IS (internet)', aprsisOn: 'Připojit se k APRS-IS', server: 'Server', port: 'Port', passcode: 'Heslo pro APRS-IS (passcode)', show: 'Zobrazit', hide: 'Skrýt', passHint: 'Prázdné: spočítá se z tvé značky (standardní passcode APRS-IS). Zadej vlastní, pokud ti bylo přiděleno jiné.', passOwn: 'Je uložené tvoje vlastní heslo. Smazáním pole se bude počítat ze značky.', radius: 'Přijímat pakety do (km od domova, 0 = žádné)', igateRx: 'iGate: posílat pakety slyšené rádiem do APRS-IS', igateTx: 'iGate: zprávy z internetu pro místní stanice vysílat rádiem', save: 'Uložit', saved: 'Uloženo; integrace se restartuje s novým nastavením.', isState: 'APRS-IS', verified: 'přihlášeno', unverified: 'připojeno, neověřeno (zkontroluj passcode)', disconnectedIs: 'nepřipojeno', passAuto: 'spočítá se automaticky', igateHint: 'Posílání do APRS-IS nepotřebuje vysílač; brána do rádia potřebuje zapnuté vysílání a licenci.', ssidHint: 'Obvyklé významy SSID:',
     chat: 'Chat', showAprs: 'Zobrazit APRS pakety', chatHint: 'Prostý text pro všechny: Enter ho odešle jako UI rámec, na začátku s tvou značkou.', chatEmpty: 'Zatím nic nepřišlo.', chatTo: 'Komu',
     terminal: 'Terminál', monitor: 'Monitor', aprs: 'APRS', tnc: 'TNC', online: 'připojeno', offline: 'nepřipojeno',
     tx: 'Vysílání', on: 'zapnuto', off: 'vypnuto', connectTo: 'Připojit k', via: 'přes', connect: 'Připojit', disconnect: 'Odpojit',
@@ -96,7 +99,46 @@ class AprsKissPanel extends HTMLElement {
     if (first) this._init();
   }
 
-  set narrow(v) { this._narrow = v; }
+  set narrow(v) {
+    this._narrow = v;
+    this._fitViewport();
+    if (this._state) this._renderHeader();
+  }
+
+  // Same approach as MeshCore Chattx: while the on-screen keyboard is open, pin the
+  // whole panel to the visible part of the screen, so the header with Home Assistant's
+  // menu button and the tabs stay on top and the input sits right above the keyboard.
+  _fitViewport() {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    if (vv.scale > 1.01) { this._unpin(); return; }   // pinch zoom, not the keyboard
+    if (Math.abs(vv.width - (this._vvWidth || 0)) > 1) { this._vvWidth = vv.width; this._vvFull = vv.height; }
+    this._vvFull = Math.max(this._vvFull || 0, vv.height);
+    const keyboard = this._vvFull - vv.height >= 120;
+    // On a phone the panel is always pinned to the screen: the page itself never scrolls,
+    // only the content under the header does, so the header can't be scrolled away.
+    if (!keyboard && !this._narrow) { this._unpin(); return; }
+    this._pinned = true;
+    Object.assign(this.style, { position: 'fixed', top: `${vv.offsetTop}px`, left: '0', width: '100%', height: `${vv.height}px` });
+    this.shadowRoot.querySelector('.page')?.classList.toggle('kbd', keyboard && !!this._narrow);
+  }
+
+  _unpin() {
+    if (!this._pinned) return;
+    this._pinned = false;
+    for (const k of ['position', 'top', 'left', 'width', 'height']) this.style.removeProperty(k);
+    this.shadowRoot.querySelector('.page')?.classList.remove('kbd');
+    window.scrollTo(0, 0);
+  }
+
+  connectedCallback() {
+    if (!this._onVv && window.visualViewport) {
+      this._onVv = () => this._fitViewport();
+      window.visualViewport.addEventListener('resize', this._onVv);
+      window.visualViewport.addEventListener('scroll', this._onVv);
+      this._fitViewport();
+    }
+  }
 
   async _init() {
     this._renderShell();
@@ -106,6 +148,12 @@ class AprsKissPanel extends HTMLElement {
   }
 
   disconnectedCallback() {
+    if (this._onVv) {
+      window.visualViewport.removeEventListener('resize', this._onVv);
+      window.visualViewport.removeEventListener('scroll', this._onVv);
+      this._onVv = null;
+      this._unpin();
+    }
     this._unsub?.();
     this._unsubState?.();
   }
@@ -177,8 +225,11 @@ class AprsKissPanel extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <link rel="stylesheet" href="${LEAFLET_CSS}">
       <style>
-        :host { display: block; height: 100%; background: var(--primary-background-color); color: var(--primary-text-color); font-family: var(--paper-font-body1_-_font-family, Roboto, sans-serif); }
-        .page { display: flex; flex-direction: column; height: 100%; max-width: 1100px; margin: 0 auto; box-sizing: border-box; padding: 12px 16px; gap: 10px; }
+        :host { display: block; height: 100%; overscroll-behavior: none; background: var(--primary-background-color); color: var(--primary-text-color); font-family: var(--paper-font-body1_-_font-family, Roboto, sans-serif); }
+        .page { display: flex; flex-direction: column; height: 100%; min-height: 0; max-width: 1100px; margin: 0 auto; box-sizing: border-box; padding: 12px 16px; gap: 10px; }
+        /* Like a Home Assistant dashboard: the header with the menu button and the tabs stay on top while the rest scrolls. */
+        .top { position: sticky; top: 0; z-index: 10; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;
+               margin: -12px -16px 0; padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 0; background: var(--primary-background-color); }
         header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
         h1 { font-size: 20px; margin: 0 8px 0 0; font-weight: 500; }
         .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 14px; font-size: 13px; background: var(--secondary-background-color); border: 1px solid var(--divider-color); }
@@ -188,6 +239,7 @@ class AprsKissPanel extends HTMLElement {
         button.chip.tx-on { background: rgba(229, 57, 53, 0.15); border-color: #e53935; }
         nav { display: flex; gap: 4px; border-bottom: 1px solid var(--divider-color); }
         nav button { background: none; border: none; padding: 8px 14px; font: inherit; color: var(--secondary-text-color); cursor: pointer; border-bottom: 2px solid transparent; }
+        nav button.gear { margin-left: auto; display: inline-flex; align-items: center; padding: 6px 12px; }
         nav button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
         main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
         .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -204,8 +256,10 @@ class AprsKissPanel extends HTMLElement {
         .chatline.out .c { color: var(--primary-color); }
         .chatline.aprs { color: var(--secondary-text-color); font-size: 13px; }
         .chatline .to { color: var(--secondary-text-color); font-size: 12px; margin-right: 4px; }
-        .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; overflow: auto; padding-bottom: 12px; }
-        .form .card { display: flex; flex-direction: column; gap: 10px; }
+        .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 12px; overflow: auto; padding-bottom: 12px; }
+        .form .card { display: flex; flex-direction: column; gap: 10px; overflow: visible; min-height: auto; min-width: 0; }
+        .form input:not([type=checkbox]), .form select { width: 100%; min-width: 0; box-sizing: border-box; } .form .callrow input { width: auto; } .form .callrow select { width: 90px; flex: none; }
+        .form { align-content: start; } .callrow input.f-pass { text-transform: none; }
         .field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--secondary-text-color); }
         .field input, .field select { color: var(--primary-text-color); }
         .field.check { flex-direction: row; align-items: center; gap: 8px; color: var(--primary-text-color); font-size: 14px; }
@@ -225,7 +279,40 @@ class AprsKissPanel extends HTMLElement {
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         td, th { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--divider-color); vertical-align: top; }
         th { color: var(--secondary-text-color); font-weight: 500; }
-        .map { height: 380px; border-radius: 10px; overflow: hidden; }
+        .map { height: 380px; border-radius: 10px; overflow: hidden; position: relative; z-index: 0; }
+        .menu:empty { display: none; }
+        .menu { margin: -8px 0 -8px -8px; color: var(--primary-text-color); }
+        nav { overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+        nav::-webkit-scrollbar { display: none; }
+        nav button { flex-shrink: 0; white-space: nowrap; }
+        .msgrow .to { width: 120px; } .msgrow .text { flex: 1; min-width: 160px; }
+        main.scroll { overflow-y: auto; }
+        main.scroll .cols { flex: none; } main.scroll .card { flex-shrink: 0; }
+        @media (max-width: 600px) {
+          .page { padding: 8px 10px; gap: 8px; }
+          main { overflow-y: auto; overscroll-behavior: contain; }
+          pre, .chatlog { min-height: 120px; }
+          .top { margin: -8px -10px 0; padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 0; gap: 8px; }
+          h1 { font-size: 17px; }
+          .chip { font-size: 12px; padding: 3px 8px; }
+          nav button { padding: 8px 10px; }
+          input, select, textarea { font-size: 16px; }  /* no zoom on iPhone */
+          .controls label { display: flex; align-items: center; gap: 6px; flex: 1 1 140px; }
+          .controls input { flex: 1; width: auto; min-width: 0; }
+          .row label { flex: 1 1 140px; display: flex; align-items: center; gap: 6px; } .row label input { flex: 1; min-width: 0; width: auto; }
+          .controls label input[type=checkbox], .row label input[type=checkbox] { flex: none; width: auto; }
+          .msgrow .to { width: 100px; } .msgrow .text { min-width: 0; flex: 1 1 140px; } .msgrow .btn { flex: 1 0 100%; }
+          pre { font-size: 12px; padding: 8px; }
+          .map { height: 260px; }
+          .msgs { max-height: 50vh; }
+          .pos { display: none; }
+          table { font-size: 12px; } td, th { padding: 4px; }
+          .form { grid-template-columns: minmax(0, 1fr); }
+          .chatline { font-size: 14px; }
+          .line .btn { padding: 7px 12px; }
+        }
+        .page.kbd .hint { display: none; }
+        .page.kbd pre, .page.kbd .chatlog { min-height: 60px; }
         .leaflet-container { background: var(--secondary-background-color); font: inherit; }
         .leaflet-tooltip.call-label { background: var(--card-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color) !important; box-shadow: 0 1px 3px rgba(0,0,0,.3); padding: 1px 5px; font-size: 11px; }
         .wx { display: inline-block; }
@@ -233,7 +320,7 @@ class AprsKissPanel extends HTMLElement {
         .call-label::before { display: none; }
       </style>
 
-      <div class="page"><header></header><nav></nav><main></main></div>`;
+      <div class="page"><div class="top"><header></header><nav></nav></div><main></main></div>`;
   }
 
   _render() {
@@ -241,13 +328,16 @@ class AprsKissPanel extends HTMLElement {
     this._renderHeader();
     const t = this._t;
     const nav = this.shadowRoot.querySelector('nav');
-    nav.innerHTML = ['chat', 'terminal', 'monitor', 'aprs', 'settings'].map((k) => `<button data-tab="${k}" class="${this._tab === k ? 'active' : ''}">${t[k]}</button>`).join('');
+    nav.innerHTML = ['chat', 'terminal', 'monitor', 'aprs', 'settings'].map((k) => k === 'settings'
+      ? `<button data-tab="${k}" class="gear ${this._tab === k ? 'active' : ''}" title="${t[k]}" aria-label="${t[k]}"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="${COG}"/></svg></button>`
+      : `<button data-tab="${k}" class="${this._tab === k ? 'active' : ''}">${t[k]}</button>`).join('');
     nav.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
       this._tab = b.dataset.tab;
       localStorage.setItem('aprs-kiss-tab', this._tab);
       this._render();
     }));
     const main = this.shadowRoot.querySelector('main');
+    main.classList.remove('scroll');
     if (!this._state) {
       main.innerHTML = `<div class="error">${esc(this._error)}</div>`;
       return;
@@ -270,10 +360,18 @@ class AprsKissPanel extends HTMLElement {
     }
     const sessions = Object.entries(s.sessions || {}).map(([k, v]) => `${k}: ${v}`).join(', ');
     header.innerHTML = `
+      <span class="menu"></span>
       <h1>APRS & Packet · ${esc(s.callsign)}</h1>
       <span class="chip"><span class="dot ${s.tnc_connected ? 'ok' : 'bad'}"></span>${t.tnc} ${s.tnc_connected ? t.online : t.offline}</span>
       <button class="chip ${s.tx_enabled ? 'tx-on' : ''}" id="tx"><span class="dot ${s.tx_enabled ? 'bad' : ''}"></span>${t.tx}: ${s.tx_enabled ? t.on : t.off}</button>
       ${sessions ? `<span class="chip">${esc(sessions)}</span>` : ''}`;
+    if (this._narrow) {
+      // On a phone Home Assistant hides its sidebar: this button opens it.
+      const menu = document.createElement('ha-menu-button');
+      menu.hass = this._hass;
+      menu.narrow = true;
+      header.querySelector('.menu').appendChild(menu);
+    }
     header.querySelector('#tx').addEventListener('click', async () => {
       const r = await this._ws({ type: 'aprs_kiss/set_tx', enabled: !s.tx_enabled });
       if (r) { s.tx_enabled = r.tx_enabled; this._render(); }
@@ -376,6 +474,7 @@ class AprsKissPanel extends HTMLElement {
   async _renderSettings(main) {
     const t = this._t;
     const cs = (this._hass.language || '').startsWith('cs');
+    main.classList.add('scroll');
     main.innerHTML = '<div class="hint">…</div>';
     const st = await this._ws({ type: 'aprs_kiss/get_settings' });
     if (!st) { main.innerHTML = `<div class="error">${esc(this._error)}</div>`; return; }
@@ -407,7 +506,10 @@ class AprsKissPanel extends HTMLElement {
           ${isLine}
           <label class="field">${t.server}<input class="f-host" value="${esc(st.aprsis_host || 'euro.aprs2.net')}"></label>
           <label class="field">${t.port}<input class="f-port" type="number" value="${st.aprsis_port || 14580}"></label>
-          <label class="field">${t.passcode}<input class="f-pass" value="${esc(st.aprsis_passcode || '')}" placeholder="${t.passAuto}" type="password" autocomplete="off"></label>
+          <label class="field">${t.passcode}
+            <div class="callrow"><input class="f-pass" value="${esc(st.aprsis_passcode || '')}" placeholder="${t.passAuto}" type="password" inputmode="numeric" autocomplete="off">
+            <button type="button" class="btn secondary f-showpass">${t.show}</button></div>
+            <span>${st.aprsis_passcode ? t.passOwn : t.passHint}</span></label>
           <label class="field">${t.radius}<input class="f-radius" type="number" min="0" max="500" value="${st.aprsis_radius_km ?? 50}"></label>
           <label class="field check"><input type="checkbox" class="f-irx" ${st.igate_rx ? 'checked' : ''}> ${t.igateRx}</label>
           <label class="field check"><input type="checkbox" class="f-itx" ${st.igate_tx ? 'checked' : ''}> ${t.igateTx}</label>
@@ -416,6 +518,11 @@ class AprsKissPanel extends HTMLElement {
       </div>
       <div class="row"><button class="btn save">${t.save}</button><span class="msg-saved"></span><span class="error">${esc(this._error)}</span></div>`;
     const q = (c) => main.querySelector(c);
+    q('.f-showpass').addEventListener('click', () => {
+      const f = q('.f-pass');
+      f.type = f.type === 'password' ? 'text' : 'password';
+      q('.f-showpass').textContent = f.type === 'password' ? t.show : t.hide;
+    });
     q('.f-ssid').addEventListener('change', (e) => { q('.ssid-meaning').textContent = SSIDS[cs ? 'cs' : 'en'][Number(e.target.value)]; });
     q('.save').addEventListener('click', async () => {
       const call = q('.f-call').value.trim().toUpperCase();
@@ -523,23 +630,24 @@ class AprsKissPanel extends HTMLElement {
     const t = this._t;
     const msgs = [...this._state.messages].reverse();
     const heard = [...this._state.heard].sort((a, b) => b.last_heard - a.last_heard);
+    main.classList.add('scroll');
     main.innerHTML = `
-      <div class="row">
+      <div class="row msgrow">
         <input class="call to" placeholder="${t.to}" value="${esc(this._msgTo || '')}">
-        <input class="text" style="flex:1;min-width:180px" maxlength="67" placeholder="${t.message}">
+        <input class="text" maxlength="67" placeholder="${t.message}">
         <button class="btn sendmsg">${t.send}</button>
       </div>
       <div class="error">${esc(this._error)}</div>
       <div class="card"><h2>${t.map}</h2><div class="map"></div></div>
       <div class="cols">
-        <div class="card"><h2>${t.messages}</h2>${msgs.length ? msgs.map((m) => `
+        <div class="card msgs"><h2>${t.messages}</h2>${msgs.length ? msgs.map((m) => `
           <div class="msg ${m.direction}">${esc(m.text)}
             <small>${m.direction === 'in' ? esc(m.from) : '→ ' + esc(m.to)} · ${time(m.time)}${m.direction === 'out' && m.state ? ' · ' + esc(t.state[m.state] || m.state) : ''}</small></div>`).join('') : `<div class="hint">${t.noMessages}</div>`}
         </div>
         <div class="card"><h2>${t.heard}</h2><table>
-          <tr><th>Call</th><th>${t.lastHeard}</th><th>${t.position}</th><th>${t.comment}</th></tr>
+          <tr><th>Call</th><th>${t.lastHeard}</th><th class="pos">${t.position}</th><th>${t.comment}</th></tr>
           ${heard.map((h) => `<tr><td>${esc(h.call)}</td><td>${time(h.last_heard)}</td>
-            <td>${h.latitude != null ? `${h.latitude.toFixed(4)}, ${h.longitude.toFixed(4)}` : ''}</td><td>${h.weather ? `<span class="wx">🌡 ${esc(wxText(h.weather))}</span><br>` : ''}${esc(h.comment || h.status || '')}</td></tr>`).join('')}
+            <td class="pos">${h.latitude != null ? `${h.latitude.toFixed(4)}, ${h.longitude.toFixed(4)}` : ''}</td><td>${h.weather ? `<span class="wx">🌡 ${esc(wxText(h.weather))}</span><br>` : ''}${esc(h.comment || h.status || '')}</td></tr>`).join('')}
         </table></div>
       </div>`;
     const send = async () => {
@@ -607,4 +715,4 @@ AprsKissPanel.prototype._renderMap = async function renderMap(el, heard) {
   setTimeout(() => map.invalidateSize(), 100);
 };
 
-customElements.define('aprs-kiss-panel', AprsKissPanel);
+if (!customElements.get('aprs-kiss-panel')) customElements.define('aprs-kiss-panel', AprsKissPanel);

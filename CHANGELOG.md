@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.1] - 2026-11-16
+
+- Settings: a clear *APRS-IS password (passcode)* field with Show/Hide; empty means computed from the callsign.
+- The panel works well on a phone:
+  - the header with the ☰ button (opens Home Assistant's sidebar), the TNC and Transmit status and the tabs always stays on top; the panel is pinned to the screen and only the content below the header scrolls;
+  - with the on-screen keyboard open (Chat, Terminal) the panel fits the visible part of the screen (as in MeshCore Chattx): the input sits right above the keyboard, the latest lines above it;
+  - Settings is a gear icon at the end of the tab bar, so all tabs fit;
+  - forms take one column and never get wider than the screen, inputs don't make iOS zoom, the APRS map and message list fit the screen.
+- No error when the panel script is loaded twice (e.g. the app kept an older copy).
+- New screenshots, including a phone, light and dark.
+
 ## [0.3.0] - 2026-11-16
 
 - Settings tab: callsign and SSID with the usual meaning of each SSID, the APRS icon from the 30 most common symbols, comment, path, a regular position beacon (every N minutes, at least 10), tracked callsigns, incoming connections, TX delay. Saving restarts the integration with the new settings.

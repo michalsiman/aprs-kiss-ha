@@ -29,7 +29,7 @@ DEFAULT_SYMBOL = "/-"
 DEFAULT_APRSIS_HOST = "euro.aprs2.net"
 DEFAULT_APRSIS_PORT = 14580
 DEFAULT_APRSIS_RADIUS = 50
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 
 EVENT_PACKET = f"{DOMAIN}_packet"      # every decoded APRS packet
 EVENT_MESSAGE = f"{DOMAIN}_message"    # an APRS message addressed to us
