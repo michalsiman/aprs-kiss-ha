@@ -222,3 +222,25 @@ class WeatherTest(unittest.TestCase):
         self.assertEqual(wx["wind_direction"], 90)
         self.assertAlmostEqual(wx["wind_speed"], 2.24, places=2)  # 5 mph
         self.assertNotIn("speed", st.heard["OK1WX"])
+
+
+aprsis = _load("aprsis")
+
+
+class AprsIsTest(unittest.TestCase):
+    def test_passcode(self):
+        self.assertEqual(aprsis.passcode("N0CALL"), 13023)
+        self.assertEqual(aprsis.passcode("n0call-9"), 13023)  # SSID and case do not matter
+
+    def test_gate_to_is(self):
+        line = aprsis.gate_to_is("OK1ABC-9", "APRS", ["OK0DIG*", "WIDE2-1"], b"=4945.12N/01322.50E>hi", "OK1SIM-7")
+        self.assertEqual(line, "OK1ABC-9>APRS,OK0DIG*,WIDE2-1,qAR,OK1SIM-7:=4945.12N/01322.50E>hi")
+
+    def test_not_gated(self):
+        for path, info in ((["NOGATE"], b"!x"), (["RFONLY"], b"!x"), (["TCPIP*"], b"!x"), ([], b"?APRS?"),
+                           ([], b"}OK1A>APRS,TCPIP,OK1B*::OK1C     :hi")):
+            self.assertIsNone(aprsis.gate_to_is("OK1ABC", "APRS", path, info, "OK1SIM-7"), (path, info))
+
+    def test_third_party(self):
+        self.assertEqual(aprsis.third_party("OK1ABC", "APRS", ":OK1DEF   :hi{1", "OK1SIM-7"),
+                         "}OK1ABC>APRS,TCPIP,OK1SIM-7*::OK1DEF   :hi{1")

@@ -6,6 +6,7 @@ A Home Assistant integration that turns a radio with a **KISS TNC** into an **AP
 - **Packet radio terminal**: connect to a BBS, node or another station (AX.25 connected mode), type commands and read the answers; send unproto text; accept incoming connections if you want.
 - **Chat**: a plain chat window. Type and press Enter: the text goes out to everyone as `OK1SIM-7: text`, and everything typed by others on the frequency appears below.
 - **Monitor**: every frame heard and sent, in the classic TNC monitor format.
+- **APRS-IS and iGate**: connect to the APRS internet network; gate what the radio hears to the internet, and internet messages for local stations to the radio; messages to you from the internet arrive in Home Assistant too.
 - Home Assistant **entities, services and events**, so automations can react to APRS messages or send them.
 
 It was built and tested for a **Quansheng UV-K1 / UV-K5 V3** running the **F4HWN** firmware with its **KISS TNC** app, connected by USB-C. Any KISS TNC works: Direwolf, a hardware TNC, a Mobilinkd, a NinoTNC, … over TCP or a serial port.
@@ -30,6 +31,12 @@ It was built and tested for a **Quansheng UV-K1 / UV-K5 V3** running the **F4HWN
 <td><b>APRS</b>: map of the stations heard, messages with their acknowledgement, weather.</td>
 <td><b>Monitor</b>: every frame, received (&lt;&lt;) and sent (&gt;&gt;), with AX.25 control fields.</td>
 </tr>
+<tr>
+<td colspan="2"><picture><source media="(prefers-color-scheme: light)" srcset="assets/settings-light.png"><img src="assets/settings.png" alt="Settings: station, icon, APRS-IS and iGate"></picture></td>
+</tr>
+<tr>
+<td colspan="2"><b>Settings</b>: callsign and SSID with their usual meaning, the APRS icon from the common symbols, beacon, tracked stations, APRS-IS and iGate.</td>
+</tr>
 </table>
 
 *The panel follows Home Assistant's theme, light or dark; the screenshots follow your GitHub theme. They were taken with the built-in simulator (see [Testing without a radio](#testing-without-a-radio)); the stations are made up.*
@@ -45,9 +52,10 @@ It was built and tested for a **Quansheng UV-K1 / UV-K5 V3** running the **F4HWN
 7. [Transmit: APRS](#7-transmit-aprs)
 8. [Packet radio terminal and chat](#8-packet-radio-terminal-and-chat)
 9. [Entities, services and events](#9-entities-services-and-events)
-10. [Testing without a radio](#testing-without-a-radio)
-11. [Troubleshooting](#11-troubleshooting)
-12. [How it works](#12-how-it-works)
+10. [APRS-IS and iGate](#10-aprs-is-and-igate)
+11. [Testing without a radio](#testing-without-a-radio)
+12. [Troubleshooting](#12-troubleshooting)
+13. [How it works](#13-how-it-works)
 
 ## 1. What you need
 
@@ -151,7 +159,7 @@ Settings → Devices & services → **Add integration** → **APRS & Packet (KIS
    - *Position comment*: sent with your position.
    - *Accept incoming packet connections*: lets other stations connect to you (only while transmitting is on).
 
-Later changes (path, symbol, comment, **callsigns to track on the map**, TX delay) are under the integration's **Configure** button.
+Everything can be changed later in the panel's **Settings** tab: callsign and SSID (the list shows the usual meaning of each SSID: -7 handheld, -9 car, -10 iGate, …), the **icon** from the most common APRS symbols, comment, path, a **regular position beacon**, callsigns to track on the map, incoming connections, TX delay, and **APRS-IS / iGate**. Saving restarts the integration with the new settings. (The integration's *Configure* button offers the station options too.)
 
 A new sidebar item **APRS & Packet** opens the panel (administrators only).
 
@@ -266,6 +274,24 @@ actions:
       message: "{{ trigger.event.data.text }}"
 ```
 
+## 10. APRS-IS and iGate
+
+APRS-IS is the internet side of APRS ([aprs-is.net](https://www.aprs-is.net)); [aprs.fi](https://aprs.fi) shows what reaches it. In **Settings → APRS-IS**:
+
+1. **Connect to APRS-IS**: server `euro.aprs2.net` (or `rotate.aprs2.net`, `noam.aprs2.net`, …), port 14580. The **passcode** is computed from your callsign automatically; enter one only if yours differs. The status line shows *logged in* and the server once the server has verified the passcode.
+2. **Receive packets within … km**: a range filter around Home Assistant's home for the internet traffic the integration receives.
+3. **Messages to you from the internet** arrive like radio messages (event `aprs_kiss_message`, sensor *Last message*) and are acknowledged over the internet.
+4. **Your own packets** (position, status, messages) go to APRS-IS as well while connected, also with transmitting off: Home Assistant can then message APRS stations through the internet alone.
+
+**iGate** (both switches are off by default):
+
+| Switch | What it does | Needs |
+|---|---|---|
+| *Send packets heard on the radio to APRS-IS* (RX iGate) | Every APRS packet heard on RF goes to APRS-IS with `qAR,<your call>`. Packets with `NOGATE`, `RFONLY`, `TCPIP` or `TCPXX` in their path, queries and third-party internet traffic are not gated. | APRS-IS connection; no transmitter |
+| *Send internet messages to local stations by radio* (TX iGate) | A message from APRS-IS to a station heard **on RF in the last 30 minutes** (and not itself on RF) is transmitted in the third-party format `}FROM>TO,TCPIP,<your call>*:…`. Positions and other traffic are not sent to RF. | Transmit on, licence |
+
+Use the SSID **-10** and the symbol **iGate** (`I&`, or `R&` for receive only) for a station that runs as an iGate. The entity *APRS-IS connected* has the counters (RF→IS, IS→RF, messages from the internet).
+
 ## Testing without a radio
 
 `tests/fake_tnc.py` is a simulated KISS TNC on TCP. It "receives" APRS positions, weather, a status and messages to your callsign every few seconds, acknowledges your messages to `OK1ABC-9`, and runs a small BBS `OK0BBS` you can connect to (commands `H`, `L`, `B`).
@@ -282,7 +308,7 @@ Unit tests (KISS, AX.25, APRS, AX.25 sessions with lost frames, weather) run wit
 python3 -m unittest discover -s tests -t .
 ```
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
 | Problem | What to do |
 |---|---|
@@ -302,7 +328,7 @@ logger:
     custom_components.aprs_kiss: debug
 ```
 
-## 12. How it works
+## 13. How it works
 
 ```
 Quansheng UV-K1/K5 V3 (F4HWN KISS TNC app, AFSK 1200 Bd)

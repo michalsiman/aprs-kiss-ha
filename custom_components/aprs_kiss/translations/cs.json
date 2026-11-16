@@ -71,6 +71,9 @@
     "binary_sensor": {
       "tnc_connected": {
         "name": "TNC připojeno"
+      },
+      "aprsis_connected": {
+        "name": "APRS-IS připojeno"
       }
     },
     "switch": {

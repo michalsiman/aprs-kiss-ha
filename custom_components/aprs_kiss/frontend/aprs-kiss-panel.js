@@ -6,8 +6,35 @@ const LEAFLET_JS = new URL('vendor/leaflet-src.esm.js', import.meta.url).href;
 const LEAFLET_CSS = new URL('vendor/leaflet.css', import.meta.url).href;
 const TILE_TOKEN_REFRESH_MS = 20 * 60 * 1000;
 
+// SSID conventions (APRS SSID recommendations by Bob Bruninga, WB4APR).
+const SSIDS = {
+  en: ['0 – home station, primary', '1 – generic additional station, digi, mobile, wx', '2 – generic additional station', '3 – generic additional station',
+    '4 – generic additional station', '5 – other networks (D-STAR, iPhone, Android…)', '6 – special activity, satellite, camping', '7 – handheld, walkie-talkie',
+    '8 – boat, sailboat, RV, second main mobile', '9 – primary mobile (car)', '10 – internet, iGate, EchoLink, Winlink', '11 – balloon, aircraft, spacecraft',
+    '12 – APRStt, DTMF, one-way tracker', '13 – weather station', '14 – truck', '15 – generic additional station'],
+  cs: ['0 – domácí stanice, hlavní', '1 – další stanice, digi, mobil, meteo', '2 – další stanice', '3 – další stanice',
+    '4 – další stanice', '5 – jiné sítě (D-STAR, iPhone, Android…)', '6 – zvláštní akce, satelit, kempování', '7 – ruční stanice (ručka)',
+    '8 – loď, karavan, druhé auto', '9 – hlavní mobilní (auto)', '10 – internet, iGate, EchoLink, Winlink', '11 – balón, letadlo, kosmická loď',
+    '12 – APRStt, DTMF, jednosměrný tracker', '13 – meteostanice', '14 – nákladní auto', '15 – další stanice'],
+};
+
+// The APRS symbols people use most (table + code), with an emoji to recognise them.
+const SYMBOLS = [
+  ['/-', '🏠', 'House', 'Dům'], ['/>', '🚗', 'Car', 'Auto'], ['/[', '🚶', 'Person (jogger)', 'Osoba (chodec)'],
+  ['/b', '🚲', 'Bicycle', 'Kolo'], ['/<', '🏍️', 'Motorcycle', 'Motorka'], ['/k', '🛻', 'Pickup truck', 'Pick-up'],
+  ['/u', '🚚', 'Truck (18-wheeler)', 'Kamion'], ['/v', '🚐', 'Van', 'Dodávka'], ['/j', '🚙', 'Jeep', 'Terénní auto'],
+  ['/R', '🚌', 'Recreational vehicle', 'Obytný vůz'], ['/U', '🚌', 'Bus', 'Autobus'], ['/s', '🚤', 'Ship, power boat', 'Loď (motorová)'],
+  ['/Y', '⛵', 'Yacht (sail)', 'Plachetnice'], ['/\'', '✈️', 'Small aircraft', 'Malé letadlo'], ['/X', '🚁', 'Helicopter', 'Vrtulník'],
+  ['/O', '🎈', 'Balloon', 'Balón'], ['/;', '⛺', 'Campground, portable', 'Kemp, portable'], ['/y', '📡', 'House with yagi', 'Dům s anténou'],
+  ['/r', '🗼', 'Antenna, repeater', 'Anténa, převaděč'], ['/#', '🔁', 'Digipeater', 'Digipeater'], ['I&', '🌐', 'iGate (RX and TX)', 'iGate (RX i TX)'],
+  ['R&', '📥', 'iGate, receive only', 'iGate jen příjem'], ['/_', '🌦️', 'Weather station', 'Meteostanice'], ['/a', '🚑', 'Ambulance', 'Sanitka'],
+  ['/f', '🚒', 'Fire truck', 'Hasiči'], ['/+', '➕', 'Red Cross', 'Červený kříž'], ['/h', '🏥', 'Hospital', 'Nemocnice'],
+  ['/o', '🏢', 'EOC (emergency centre)', 'Krizové centrum'], ['/E', '👁️', 'Eyeball (event)', 'Akce, pozorování'], ['/$', '☎️', 'Phone', 'Telefon'],
+];
+
 const TEXTS = {
   en: {
+    settings: 'Settings', callsign: 'Callsign', ssid: 'SSID', symbol: 'Icon (APRS symbol)', comment: 'Position comment', path: 'Digipeater path', beacon: 'Send position every (minutes, 0 = off, at least 10)', tracked: 'Callsigns to track on the map', incoming: 'Accept incoming packet connections', txdelay: 'TX delay sent to the TNC (ms, 0 = leave)', station: 'Station', aprsis: 'APRS-IS (internet)', aprsisOn: 'Connect to APRS-IS', server: 'Server', port: 'Port', passcode: 'Passcode (empty = computed from the callsign)', radius: 'Receive packets within (km of home, 0 = none)', igateRx: 'iGate: send packets heard on the radio to APRS-IS', igateTx: 'iGate: send internet messages to local stations by radio', save: 'Save', saved: 'Saved; the integration restarts with the new settings.', isState: 'APRS-IS', verified: 'logged in', unverified: 'connected, not verified (check the passcode)', disconnectedIs: 'not connected', passAuto: 'computed automatically', igateHint: 'Sending to APRS-IS needs no transmitter; gating to the radio needs Transmit on and a licence.', ssidHint: 'Usual meanings of the SSID:',
     chat: 'Chat', showAprs: 'Show APRS packets', chatHint: 'Plain text to everyone: Enter sends it as a UI frame, starting with your callsign.', chatEmpty: 'Nothing heard yet.', chatTo: 'To',
     terminal: 'Terminal', monitor: 'Monitor', aprs: 'APRS', tnc: 'TNC', online: 'connected', offline: 'not connected',
     tx: 'Transmit', on: 'on', off: 'off', connectTo: 'Connect to', via: 'via', connect: 'Connect', disconnect: 'Disconnect',
@@ -18,6 +45,7 @@ const TEXTS = {
     txOffHint: 'Transmitting is off. Switch it on to connect or send.', state: { pending: 'waiting for ack', acked: 'acknowledged', rejected: 'rejected', failed: 'no ack', sent: 'sent' },
   },
   cs: {
+    settings: 'Nastavení', callsign: 'Značka', ssid: 'SSID', symbol: 'Ikona (APRS symbol)', comment: 'Komentář k poloze', path: 'Cesta přes digipeatery', beacon: 'Posílat polohu každých (minut, 0 = ne, nejméně 10)', tracked: 'Značky sledované na mapě', incoming: 'Přijímat příchozí packet spojení', txdelay: 'TX delay pro TNC (ms, 0 = neměnit)', station: 'Stanice', aprsis: 'APRS-IS (internet)', aprsisOn: 'Připojit se k APRS-IS', server: 'Server', port: 'Port', passcode: 'Passcode (prázdné = spočítat ze značky)', radius: 'Přijímat pakety do (km od domova, 0 = žádné)', igateRx: 'iGate: posílat pakety slyšené rádiem do APRS-IS', igateTx: 'iGate: zprávy z internetu pro místní stanice vysílat rádiem', save: 'Uložit', saved: 'Uloženo; integrace se restartuje s novým nastavením.', isState: 'APRS-IS', verified: 'přihlášeno', unverified: 'připojeno, neověřeno (zkontroluj passcode)', disconnectedIs: 'nepřipojeno', passAuto: 'spočítá se automaticky', igateHint: 'Posílání do APRS-IS nepotřebuje vysílač; brána do rádia potřebuje zapnuté vysílání a licenci.', ssidHint: 'Obvyklé významy SSID:',
     chat: 'Chat', showAprs: 'Zobrazit APRS pakety', chatHint: 'Prostý text pro všechny: Enter ho odešle jako UI rámec, na začátku s tvou značkou.', chatEmpty: 'Zatím nic nepřišlo.', chatTo: 'Komu',
     terminal: 'Terminál', monitor: 'Monitor', aprs: 'APRS', tnc: 'TNC', online: 'připojeno', offline: 'nepřipojeno',
     tx: 'Vysílání', on: 'zapnuto', off: 'vypnuto', connectTo: 'Připojit k', via: 'přes', connect: 'Připojit', disconnect: 'Odpojit',
@@ -176,6 +204,13 @@ class AprsKissPanel extends HTMLElement {
         .chatline.out .c { color: var(--primary-color); }
         .chatline.aprs { color: var(--secondary-text-color); font-size: 13px; }
         .chatline .to { color: var(--secondary-text-color); font-size: 12px; margin-right: 4px; }
+        .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; overflow: auto; padding-bottom: 12px; }
+        .form .card { display: flex; flex-direction: column; gap: 10px; }
+        .field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--secondary-text-color); }
+        .field input, .field select { color: var(--primary-text-color); }
+        .field.check { flex-direction: row; align-items: center; gap: 8px; color: var(--primary-text-color); font-size: 14px; }
+        .callrow { display: flex; gap: 8px; } .callrow input { flex: 1; text-transform: uppercase; } .callrow select { width: 90px; }
+        .ok { color: var(--success-color, #43a047); font-size: 13px; }
         pre .tx { color: var(--primary-color); } pre .st { color: var(--warning-color, #ef6c00); font-style: italic; } pre .out { color: var(--success-color, #2e7d32); }
         .line { display: flex; gap: 8px; } .line input { flex: 1; font-family: ui-monospace, monospace; }
         .hint { font-size: 13px; color: var(--secondary-text-color); }
@@ -206,7 +241,7 @@ class AprsKissPanel extends HTMLElement {
     this._renderHeader();
     const t = this._t;
     const nav = this.shadowRoot.querySelector('nav');
-    nav.innerHTML = ['chat', 'terminal', 'monitor', 'aprs'].map((k) => `<button data-tab="${k}" class="${this._tab === k ? 'active' : ''}">${t[k]}</button>`).join('');
+    nav.innerHTML = ['chat', 'terminal', 'monitor', 'aprs', 'settings'].map((k) => `<button data-tab="${k}" class="${this._tab === k ? 'active' : ''}">${t[k]}</button>`).join('');
     nav.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
       this._tab = b.dataset.tab;
       localStorage.setItem('aprs-kiss-tab', this._tab);
@@ -217,7 +252,8 @@ class AprsKissPanel extends HTMLElement {
       main.innerHTML = `<div class="error">${esc(this._error)}</div>`;
       return;
     }
-    if (this._tab === 'chat') this._renderChat(main);
+    if (this._tab === 'settings') this._renderSettings(main);
+    else if (this._tab === 'chat') this._renderChat(main);
     else if (this._tab === 'terminal') this._renderTerminal(main);
     else if (this._tab === 'monitor') this._renderMonitor(main);
     else this._renderAprs(main);
@@ -333,6 +369,72 @@ class AprsKissPanel extends HTMLElement {
     else span.textContent = e.text;
     pre.appendChild(span);
     if (atBottom) pre.scrollTop = pre.scrollHeight;
+  }
+
+  // ─── settings ────────────────────────────────────────────────────────
+
+  async _renderSettings(main) {
+    const t = this._t;
+    const cs = (this._hass.language || '').startsWith('cs');
+    main.innerHTML = '<div class="hint">…</div>';
+    const st = await this._ws({ type: 'aprs_kiss/get_settings' });
+    if (!st) { main.innerHTML = `<div class="error">${esc(this._error)}</div>`; return; }
+    const [base, ssid] = (st.callsign || '').split('-');
+    const sym = st.symbol || '/-';
+    const known = SYMBOLS.some((x) => x[0] === sym);
+    const is = st.aprsis;
+    const isLine = !st.aprsis_enabled ? '' : `<div class="hint">${t.isState}: ${is?.verified ? `<span class="ok">${t.verified}</span> ${esc(is.server || '')}` : is?.connected ? t.unverified : t.disconnectedIs + (is?.error ? ` (${esc(is.error)})` : '')}
+      · RF→IS ${st.igate_stats.rf_to_is} · IS→RF ${st.igate_stats.is_to_rf} · ✉ ${st.igate_stats.is_messages}</div>`;
+    main.innerHTML = `
+      <div class="form">
+        <div class="card"><h2>${t.station}</h2>
+          <label class="field">${t.callsign}
+            <div class="callrow"><input class="f-call" value="${esc(base || '')}" maxlength="6">
+            <select class="f-ssid">${SSIDS[cs ? 'cs' : 'en'].map((label, i) => `<option value="${i}" ${Number(ssid || 0) === i ? 'selected' : ''}>-${i}</option>`).join('')}</select></div>
+            <span class="ssid-meaning">${esc(SSIDS[cs ? 'cs' : 'en'][Number(ssid || 0)])}</span></label>
+          <label class="field">${t.symbol}
+            <select class="f-symbol">${SYMBOLS.map(([code, emoji, en, czech]) => `<option value="${esc(code)}" ${code === sym ? 'selected' : ''}>${emoji} ${esc(cs ? czech : en)} (${esc(code)})</option>`).join('')}
+            ${known ? '' : `<option value="${esc(sym)}" selected>${esc(sym)}</option>`}</select></label>
+          <label class="field">${t.comment}<input class="f-comment" maxlength="43" value="${esc(st.comment || '')}"></label>
+          <label class="field">${t.path}<input class="f-path" value="${esc(st.path || '')}" placeholder="WIDE1-1,WIDE2-1"></label>
+          <label class="field">${t.beacon}<input class="f-beacon" type="number" min="0" max="1440" value="${st.beacon_minutes || 0}"></label>
+          <label class="field">${t.tracked}<input class="f-tracked" value="${esc(st.tracked_callsigns || '')}" placeholder="OK1SIM-9, OK1ABC-7"></label>
+          <label class="field check"><input type="checkbox" class="f-incoming" ${st.accept_incoming ? 'checked' : ''}> ${t.incoming}</label>
+          <label class="field">${t.txdelay}<input class="f-txdelay" type="number" min="0" max="1000" step="10" value="${st.txdelay_ms || 0}"></label>
+        </div>
+        <div class="card"><h2>${t.aprsis}</h2>
+          <label class="field check"><input type="checkbox" class="f-is" ${st.aprsis_enabled ? 'checked' : ''}> ${t.aprsisOn}</label>
+          ${isLine}
+          <label class="field">${t.server}<input class="f-host" value="${esc(st.aprsis_host || 'euro.aprs2.net')}"></label>
+          <label class="field">${t.port}<input class="f-port" type="number" value="${st.aprsis_port || 14580}"></label>
+          <label class="field">${t.passcode}<input class="f-pass" value="${esc(st.aprsis_passcode || '')}" placeholder="${t.passAuto}" type="password" autocomplete="off"></label>
+          <label class="field">${t.radius}<input class="f-radius" type="number" min="0" max="500" value="${st.aprsis_radius_km ?? 50}"></label>
+          <label class="field check"><input type="checkbox" class="f-irx" ${st.igate_rx ? 'checked' : ''}> ${t.igateRx}</label>
+          <label class="field check"><input type="checkbox" class="f-itx" ${st.igate_tx ? 'checked' : ''}> ${t.igateTx}</label>
+          <div class="hint">${t.igateHint}</div>
+        </div>
+      </div>
+      <div class="row"><button class="btn save">${t.save}</button><span class="msg-saved"></span><span class="error">${esc(this._error)}</span></div>`;
+    const q = (c) => main.querySelector(c);
+    q('.f-ssid').addEventListener('change', (e) => { q('.ssid-meaning').textContent = SSIDS[cs ? 'cs' : 'en'][Number(e.target.value)]; });
+    q('.save').addEventListener('click', async () => {
+      const call = q('.f-call').value.trim().toUpperCase();
+      const ssidVal = Number(q('.f-ssid').value);
+      const settings = {
+        callsign: ssidVal ? `${call}-${ssidVal}` : call,
+        symbol: q('.f-symbol').value, comment: q('.f-comment').value, path: q('.f-path').value.trim().toUpperCase(),
+        beacon_minutes: Number(q('.f-beacon').value) || 0, tracked_callsigns: q('.f-tracked').value.trim().toUpperCase(),
+        accept_incoming: q('.f-incoming').checked, txdelay_ms: Number(q('.f-txdelay').value) || 0,
+        aprsis_enabled: q('.f-is').checked, aprsis_host: q('.f-host').value.trim(), aprsis_port: Number(q('.f-port').value) || 14580,
+        aprsis_passcode: q('.f-pass').value.trim(), aprsis_radius_km: Number(q('.f-radius').value) || 0,
+        igate_rx: q('.f-irx').checked, igate_tx: q('.f-itx').checked,
+      };
+      const r = await this._ws({ type: 'aprs_kiss/set_settings', settings });
+      if (r) {
+        q('.msg-saved').innerHTML = `<span class="ok">${t.saved}</span>`;
+        setTimeout(async () => { await this._load(); }, 4000);
+      }
+    });
   }
 
   // ─── chat ────────────────────────────────────────────────────────────

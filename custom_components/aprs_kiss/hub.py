@@ -10,11 +10,18 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.event import async_track_time_interval
+from datetime import timedelta
 from homeassistant.helpers.storage import Store
 
+from . import aprs as aprs_build
+from .aprsis import AprsIsClient, gate_to_is, passcode, third_party
 from .ax25 import Address, Frame, PF, U_DM
 from .connection import KissConnection, TncSettings
 from .const import (
+    CONF_APRSIS, CONF_APRSIS_HOST, CONF_APRSIS_PASSCODE, CONF_APRSIS_PORT, CONF_APRSIS_RADIUS,
+    CONF_BEACON_MINUTES, CONF_IGATE_RX, CONF_IGATE_TX, DEFAULT_APRSIS_HOST, DEFAULT_APRSIS_PORT,
+    DEFAULT_APRSIS_RADIUS, VERSION,
     CONF_ACCEPT_INCOMING, CONF_BAUDRATE, CONF_CALLSIGN, CONF_COMMENT, CONF_CONNECTION, CONF_DEVICE,
     CONF_HOST, CONF_PATH, CONF_PORT, CONF_SYMBOL, CONF_TXDELAY, DEFAULT_PATH, DEFAULT_PORT,
     DEFAULT_SYMBOL, DOMAIN, EVENT_MESSAGE, EVENT_PACKET, EVENT_TERMINAL, SIGNAL_UPDATE,
@@ -28,6 +35,9 @@ _LOGGER = logging.getLogger(__name__)
 MONITOR_LINES = 500
 TERMINAL_LINES = 2000
 MESSAGE_HISTORY = 200
+# A station counts as local (for gating internet messages to RF) if heard on RF this recently.
+LOCAL_SECONDS = 1800
+MIN_BEACON_MINUTES = 10
 CHAT_LINES = 500
 CHAT_DUPLICATE_SECONDS = 30
 # First character of an APRS information field (APRS 1.0.1, data type identifiers).
@@ -73,6 +83,24 @@ class Hub:
                           conf.get(CONF_SYMBOL, DEFAULT_SYMBOL), conf.get(CONF_COMMENT, "")),
             self.send_frame, parse, self._on_packet, self._on_message, self._on_update, self._next_msg_number,
         )
+        self.igate_rx = bool(conf.get(CONF_IGATE_RX, False))
+        self.igate_tx = bool(conf.get(CONF_IGATE_TX, False))
+        self.igate_stats = {"rf_to_is": 0, "is_to_rf": 0, "is_messages": 0}
+        self.aprsis: AprsIsClient | None = None
+        if conf.get(CONF_APRSIS):
+            lat, lon = hass.config.latitude, hass.config.longitude
+            radius = int(conf.get(CONF_APRSIS_RADIUS, DEFAULT_APRSIS_RADIUS) or 0)
+            code = conf.get(CONF_APRSIS_PASSCODE) or passcode(str(self.me))
+            self.aprsis = AprsIsClient(
+                conf.get(CONF_APRSIS_HOST) or DEFAULT_APRSIS_HOST,
+                int(conf.get(CONF_APRSIS_PORT) or DEFAULT_APRSIS_PORT),
+                str(self.me), int(code),
+                f"r/{lat:.3f}/{lon:.3f}/{radius}" if radius > 0 else "",
+                f"aprs-kiss-ha {VERSION}",
+                self._on_is_line, self._on_is_state,
+            )
+            self.station.send_is = self._send_own_to_is
+        self._beacon_unsub = None
 
     # ─── lifecycle ────────────────────────────────────────────────────────
 
@@ -81,11 +109,21 @@ class Hub:
         self._msg_counter = int(stored.get("msg_counter", 0))
         self.messages.extend(stored.get("messages", []))
         await self.connection.start()
+        if self.aprsis:
+            await self.aprsis.start()
+        minutes = int(self.conf.get(CONF_BEACON_MINUTES, 0) or 0)
+        if minutes:
+            self._beacon_unsub = async_track_time_interval(
+                self.hass, self._beacon, timedelta(minutes=max(MIN_BEACON_MINUTES, minutes)))
 
     async def async_stop(self) -> None:
         for s in self.sessions.values():
             s.close()
+        if self._beacon_unsub:
+            self._beacon_unsub()
         await self.station.close()
+        if self.aprsis:
+            await self.aprsis.stop()
         await self.connection.stop()
         await self._save()
 
@@ -157,6 +195,65 @@ class Hub:
     @callback
     def _on_packet(self, packet: dict[str, Any]) -> None:
         self.hass.bus.async_fire(EVENT_PACKET, {"entry_id": self.entry.entry_id, **packet})
+        if self.igate_rx and self.aprsis and self.aprsis.verified:
+            src, _, rest = packet["raw"].partition(">")
+            dst = rest.split(",", 1)[0].split(":", 1)[0]
+            info = rest.split(":", 1)[1].encode("latin-1", "replace") if ":" in rest else b""
+            line = gate_to_is(src, dst, [p for p in packet.get("path", [])], info, str(self.me))
+            if line:
+                self.hass.async_create_task(self._gate_up(line))
+
+    async def _gate_up(self, line: str) -> None:
+        if self.aprsis and await self.aprsis.send(line):
+            self.igate_stats["rf_to_is"] += 1
+            self._on_update()
+
+    # ─── APRS-IS ──────────────────────────────────────────────────────────
+
+    async def _send_own_to_is(self, info: str) -> bool:
+        if not self.aprsis or not self.aprsis.verified:
+            return False
+        return await self.aprsis.send(f"{self.me}>{aprs_build.TOCALL},TCPIP*:{info}")
+
+    @callback
+    def _on_is_state(self, connected: bool) -> None:
+        self._on_update()
+
+    @callback
+    def _on_is_line(self, line: str) -> None:
+        packet = parse(line)
+        packet["raw"] = line
+        src = packet.get("from", "")
+        if self.station.handle_is_packet(packet):
+            self.igate_stats["is_messages"] += 1
+            return
+        if not self.igate_tx or packet.get("format") != "message":
+            return
+        to = (packet.get("addresse") or "").strip().upper()
+        local = self.station.heard.get(to)
+        now = time.time()
+        if not local or now - local.get("last_heard", 0) > LOCAL_SECONDS or "TCPIP" in "".join(local.get("path", [])):
+            return
+        src_local = self.station.heard.get(src.upper())
+        if src_local and now - src_local.get("last_heard", 0) < LOCAL_SECONDS:
+            return  # the sender is on RF itself
+        head, _, info = line.partition(":")
+        dst = head.split(">", 1)[1].split(",", 1)[0] if ">" in head else "APRS"
+        self.hass.async_create_task(self._gate_down(third_party(src, dst, info, str(self.me))))
+
+    async def _gate_down(self, info: str) -> None:
+        try:
+            await self.station.send_info(info, rf=True, to_is=False)
+            self.igate_stats["is_to_rf"] += 1
+        except (TransmitRefused, ConnectionError) as err:
+            _LOGGER.debug("Internet message not sent on RF: %s", err)
+        self._on_update()
+
+    async def _beacon(self, _now=None) -> None:
+        try:
+            await self.station.send_position(self.hass.config.latitude, self.hass.config.longitude)
+        except (TransmitRefused, ConnectionError) as err:
+            _LOGGER.debug("Beacon not sent: %s", err)
 
     @callback
     def _on_message(self, message: dict[str, Any]) -> None:

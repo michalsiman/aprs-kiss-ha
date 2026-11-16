@@ -82,6 +82,8 @@ class Station:
         self._on_update = on_update
         self._next_msg_number = next_msg_number
         self.tx_enabled = False
+        # Set by the hub when APRS-IS is connected: sends one info field from us to APRS-IS.
+        self.send_is: Callable[[str], Awaitable[bool]] | None = None
         self.heard: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self.outgoing: OrderedDict[str, OutgoingMessage] = OrderedDict()
         self.last_packet: dict[str, Any] | None = None
@@ -127,8 +129,17 @@ class Station:
         self._remember_station(packet, now)
         self._on_packet(packet)
         if packet.get("format") == "message" and self._for_me(packet.get("addresse")):
-            self._handle_message(packet, now)
+            self._handle_message(packet, now, via_is=False)
         self._on_update()
+
+    def handle_is_packet(self, packet: dict[str, Any]) -> bool:
+        """A packet from APRS-IS; True when it was a message for us (handled here)."""
+        if packet.get("format") != "message" or not self._for_me(packet.get("addresse")):
+            return False
+        packet.setdefault("path", ["TCPIP"])
+        self._handle_message(packet, time.time(), via_is=True)
+        self._on_update()
+        return True
 
     def _for_me(self, addressee: str | None) -> bool:
         return bool(addressee) and addressee.strip().upper() == str(self.me)
@@ -159,7 +170,7 @@ class Station:
         while len(self.heard) > MAX_HEARD:
             self.heard.popitem(last=False)
 
-    def _handle_message(self, packet: dict[str, Any], now: float) -> None:
+    def _handle_message(self, packet: dict[str, Any], now: float, via_is: bool = False) -> None:
         sender = packet["from"]
         text = packet.get("message_text", "")
         response = packet.get("response")
@@ -173,14 +184,14 @@ class Station:
         msg_no = packet.get("msgNo")
         if msg_no:
             # Acknowledge every copy, also repeated ones: the sender did not hear our ack.
-            self._spawn(self._send_ack(sender, str(msg_no)))
+            self._spawn(self._send_ack(sender, str(msg_no), via_is))
             dkey = (sender.upper(), str(msg_no))
             if dkey in self._recent_msgs:
                 return
             self._recent_msgs[dkey] = now
         self.stats["messages_received"] += 1
         self.last_message = {"from": sender, "text": text, "msg_no": msg_no, "received_at": now,
-                             "path": packet["path"], "raw": packet["raw"]}
+                             "path": packet["path"], "raw": packet.get("raw", ""), "via": "internet" if via_is else "radio"}
         self._on_message(self.last_message)
 
     def _expire(self, now: float) -> None:
@@ -197,11 +208,24 @@ class Station:
         if len(self._tx_times) >= MAX_TX_PER_10_MIN:
             raise TransmitRefused(f"Transmit limit reached ({MAX_TX_PER_10_MIN} frames per 10 minutes)")
 
-    async def send_info(self, info: str) -> None:
-        """Send one APRS information field from our callsign over the configured path."""
-        if not self.tx_enabled:
+    async def send_info(self, info: str, rf: bool = True, to_is: bool = True) -> None:
+        """Send one APRS information field from our callsign: on RF (over the configured
+        path) while transmitting is on, and to APRS-IS while connected. Third-party
+        packets from the internet go on RF only; acks to internet messages only to APRS-IS.
+        """
+        sent_is = False
+        if to_is and self.send_is is not None:
+            try:
+                sent_is = await self.send_is(info)
+            except (OSError, ConnectionError) as err:
+                _LOGGER.debug("Not sent to APRS-IS: %s", err)
+        if not rf or not self.tx_enabled:
+            if sent_is:
+                self.stats["sent_is"] = self.stats.get("sent_is", 0) + 1
+                self._on_update()
+                return
             self.stats["refused"] += 1
-            raise TransmitRefused("Transmitting is switched off")
+            raise TransmitRefused("Transmitting is switched off" if rf else "APRS-IS is not connected")
         async with self._tx_lock:
             now = time.monotonic()
             self._check_limit(now)
@@ -214,9 +238,9 @@ class Station:
             _LOGGER.debug("Sent %s", frame.tnc2())
         self._on_update()
 
-    async def _send_ack(self, to: str, msg_no: str) -> None:
+    async def _send_ack(self, to: str, msg_no: str, via_is: bool = False) -> None:
         try:
-            await self.send_info(aprs.ack(to, msg_no))
+            await self.send_info(aprs.ack(to, msg_no), rf=not via_is, to_is=via_is)
         except (TransmitRefused, ConnectionError) as err:
             _LOGGER.debug("Ack to %s not sent: %s", to, err)
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0] - 2026-11-16
+
+- Settings tab: callsign and SSID with the usual meaning of each SSID, the APRS icon from the 30 most common symbols, comment, path, a regular position beacon (every N minutes, at least 10), tracked callsigns, incoming connections, TX delay. Saving restarts the integration with the new settings.
+- APRS-IS: login with the passcode computed from the callsign (not shown), a range filter around home, reconnecting by itself. Messages to you from the internet arrive in Home Assistant and are acknowledged over the internet; your own packets go to APRS-IS too, so messaging works through the internet also with transmitting off.
+- iGate: RF → APRS-IS following the iGate rules (no NOGATE, RFONLY, TCPIP, TCPXX, queries or third-party internet traffic), and APRS-IS → RF for messages to stations heard on RF in the last 30 minutes, in the third-party format. Both off by default.
+- Entity *APRS-IS connected* with the server and counters.
+- New screenshots including Settings, light and dark.
+
 ## [0.2.1] - 2026-11-16
 
 - The whole panel follows Home Assistant's theme, light or dark: the terminal, the monitor and the map labels no longer have fixed dark colours.

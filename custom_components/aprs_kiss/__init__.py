@@ -115,7 +115,7 @@ def _register_services(hass: HomeAssistant) -> None:
 
 def _register_ws(hass: HomeAssistant) -> None:
     for handler in (ws_state, ws_connect, ws_disconnect, ws_send_text, ws_send_unproto, ws_send_message, ws_set_tx,
-                    ws_send_chat):
+                    ws_send_chat, ws_get_settings, ws_set_settings):
         websocket_api.async_register_command(hass, handler)
 
 
@@ -190,6 +190,68 @@ async def ws_send_unproto(hass, connection, msg):
         connection.send_result(msg["id"], {})
     except (TransmitRefused, ConnectionError, ValueError) as err:
         _error(connection, msg["id"], err)
+
+
+SETTINGS_KEYS = {
+    "callsign": str, "path": str, "symbol": str, "comment": str, "beacon_minutes": int,
+    "tracked_callsigns": str, "accept_incoming": bool, "txdelay_ms": int,
+    "aprsis_enabled": bool, "aprsis_host": str, "aprsis_port": int, "aprsis_passcode": str,
+    "aprsis_radius_km": int, "igate_rx": bool, "igate_tx": bool,
+}
+
+
+@websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/get_settings", vol.Optional("entry_id"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_get_settings(hass, connection, msg):
+    hub = _hub(hass, msg.get("entry_id"))
+    conf = {**hub.entry.data, **hub.entry.options}
+    out = {k: conf.get(k) for k in SETTINGS_KEYS}
+    out["aprsis"] = {
+        "connected": bool(hub.aprsis and hub.aprsis.connected),
+        "verified": bool(hub.aprsis and hub.aprsis.verified),
+        "server": hub.aprsis.server_name if hub.aprsis else None,
+        "error": hub.aprsis.last_error if hub.aprsis else None,
+    } if hub.aprsis else None
+    out["igate_stats"] = hub.igate_stats
+    connection.send_result(msg["id"], out)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/set_settings", vol.Required("settings"): dict,
+                                  vol.Optional("entry_id"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_set_settings(hass, connection, msg):
+    from .ax25 import Address  # noqa: PLC0415
+
+    hub = _hub(hass, msg.get("entry_id"))
+    entry = hub.entry
+    new: dict[str, Any] = {}
+    try:
+        for key, value in msg["settings"].items():
+            kind = SETTINGS_KEYS.get(key)
+            if kind is None:
+                continue
+            new[key] = kind(value) if value is not None and value != "" else (False if kind is bool else ("" if kind is str else 0))
+        if "callsign" in new:
+            new["callsign"] = str(Address.parse(new["callsign"]))
+        for p in (new.get("path") or "").replace(" ", ",").split(","):
+            if p.strip():
+                Address.parse(p)
+        if "symbol" in new and len(new["symbol"]) != 2:
+            raise ValueError("The symbol is two characters: table and code")
+        if new.get("aprsis_passcode") and not str(new["aprsis_passcode"]).lstrip("-").isdigit():
+            raise ValueError("The passcode is a number")
+    except (ValueError, TypeError) as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    options = {**entry.options, **new}
+    update: dict[str, Any] = {"options": options}
+    if new.get("callsign") and new["callsign"] != entry.title:
+        update["title"] = new["callsign"]
+        update["unique_id"] = new["callsign"]
+    connection.send_result(msg["id"], {"saved": True})
+    hass.config_entries.async_update_entry(entry, **update)
 
 
 @websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/send_chat", vol.Required("text"): str,
