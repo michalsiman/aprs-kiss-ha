@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.1] - 2026-11-16
+
+- Requirement aprslib as a minimum version (aprslib>=0.7.2), as Home Assistant requires for packages it also uses.
+
 ## [0.1.0] - 2026-11-16
 
 First release.
