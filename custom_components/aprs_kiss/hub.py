@@ -28,6 +28,10 @@ _LOGGER = logging.getLogger(__name__)
 MONITOR_LINES = 500
 TERMINAL_LINES = 2000
 MESSAGE_HISTORY = 200
+CHAT_LINES = 500
+CHAT_DUPLICATE_SECONDS = 30
+# First character of an APRS information field (APRS 1.0.1, data type identifiers).
+APRS_TYPES = set("!=/@;)`':>?<$_{}*#")
 
 
 def _paths(text: str) -> list[str]:
@@ -60,6 +64,8 @@ class Hub:
         self.messages: deque[dict[str, Any]] = deque(maxlen=MESSAGE_HISTORY)
         self.monitor: deque[str] = deque(maxlen=MONITOR_LINES)
         self.terminal: deque[dict[str, Any]] = deque(maxlen=TERMINAL_LINES)
+        self.chat: deque[dict[str, Any]] = deque(maxlen=CHAT_LINES)
+        self._chat_recent: dict[str, float] = {}
         self.sessions: dict[str, Session] = {}
         self.accept_incoming = bool(conf.get(CONF_ACCEPT_INCOMING, False))
         self.station = Station(
@@ -117,6 +123,7 @@ class Hub:
             return
         self._monitor(frame.monitor())
         if frame.is_ui:
+            self._chat_frame(frame)
             self.station.handle_frame(raw)
             return
         if frame.destination != self.me:
@@ -230,6 +237,43 @@ class Hub:
             raise ConnectionError("Not connected")
         sess.send_text(text)
         self._terminal(key, "tx", text)
+
+    # ─── chat (plain text in UI frames) ───────────────────────────────────
+
+    @staticmethod
+    def is_aprs(frame: Frame) -> bool:
+        info = frame.info
+        return frame.destination.call.startswith("AP") or (bool(info) and chr(info[0]) in APRS_TYPES)
+
+    def _chat_frame(self, frame: Frame) -> None:
+        if not frame.info or frame.source == self.me:
+            return
+        now = time.time()
+        key = f"{frame.source}|{frame.info!r}"
+        for k in [k for k, t in self._chat_recent.items() if now - t > CHAT_DUPLICATE_SECONDS]:
+            del self._chat_recent[k]
+        if key in self._chat_recent:
+            return
+        self._chat_recent[key] = now
+        text = frame.info.decode("utf-8", "replace").replace("\r\n", "\n").replace("\r", "\n").strip()
+        prefix = f"{frame.source}: "
+        if text.upper().startswith(prefix.upper()):
+            text = text[len(prefix):]
+        self._chat_add({"time": now, "from": str(frame.source), "to": str(frame.destination),
+                        "text": text, "aprs": self.is_aprs(frame), "out": False})
+
+    def _chat_add(self, entry: dict[str, Any]) -> None:
+        self.chat.append(entry)
+        self.hass.bus.async_fire(EVENT_TERMINAL, {"entry_id": self.entry.entry_id, "kind": "chat", "entry": entry})
+
+    async def send_chat(self, text: str, destination: str = "CQ", path: str = "") -> None:
+        """Plain text to everyone: '<our call>: text' in a UI frame."""
+        text = text.strip()
+        if not text:
+            return
+        await self.send_unproto(destination or "CQ", f"{self.me}: {text}", path)
+        self._chat_add({"time": time.time(), "from": str(self.me), "to": (destination or "CQ").upper(),
+                        "text": text, "aprs": False, "out": True})
 
     async def send_unproto(self, destination: str, text: str, path: str = "") -> None:
         """A UI frame with plain text (classic unproto, e.g. to CQ or ID)."""

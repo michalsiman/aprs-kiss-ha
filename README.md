@@ -4,6 +4,7 @@ A Home Assistant integration that turns a radio with a **KISS TNC** into an **AP
 
 - **APRS**: receive positions, weather, status and messages; send messages (repeated until acknowledged), your position and status; a map of the stations you hear; incoming messages addressed to you are acknowledged automatically.
 - **Packet radio terminal**: connect to a BBS, node or another station (AX.25 connected mode), type commands and read the answers; send unproto text; accept incoming connections if you want.
+- **Chat**: a plain chat window. Type and press Enter: the text goes out to everyone as `OK1SIM-7: text`, and everything typed by others on the frequency appears below.
 - **Monitor**: every frame heard and sent, in the classic TNC monitor format.
 - Home Assistant **entities, services and events**, so automations can react to APRS messages or send them.
 
@@ -40,7 +41,7 @@ It was built and tested for a **Quansheng UV-K1 / UV-K5 V3** running the **F4HWN
 5. [Set it up](#5-set-it-up)
 6. [First test: receive only](#6-first-test-receive-only)
 7. [Transmit: APRS](#7-transmit-aprs)
-8. [Packet radio terminal](#8-packet-radio-terminal)
+8. [Packet radio terminal and chat](#8-packet-radio-terminal-and-chat)
 9. [Entities, services and events](#9-entities-services-and-events)
 10. [Testing without a radio](#testing-without-a-radio)
 11. [Troubleshooting](#11-troubleshooting)
@@ -54,7 +55,7 @@ It was built and tested for a **Quansheng UV-K1 / UV-K5 V3** running the **F4HWN
 | **Firmware** | **F4HWN**, *Labs* edition **v6.3.0 or newer**, with the **KISS TNC** app |
 | **Cable** | A USB-C **data** cable (not a charge-only one) and a **clip-on ferrite** (type 31 or 43) for the radio end |
 | **Computer** | A Linux machine near the radio that runs the bridge: the Home Assistant host, a Proxmox host, a Raspberry Pi, … |
-| **Home Assistant** | 2025.6 or newer |
+| **Home Assistant** | 2025.6 or newer; the map needs **2026.11** or newer (its tile proxy) |
 | **Licence** | An amateur radio licence and your callsign, for transmitting |
 
 You can also skip the bridge and plug the radio straight into the Home Assistant machine (see [3.4](#34-without-a-bridge-radio-plugged-into-home-assistant)).
@@ -158,7 +159,7 @@ Keep **Transmit off** (the default). In the panel:
 
 - The header shows **TNC connected** once the bridge and the radio are up.
 - **Monitor** lists every frame the radio decodes. On 144.800 MHz you should see APRS traffic within minutes, depending on the area.
-- **APRS** shows the stations heard, their positions on the map (map tiles need internet) and their weather.
+- **APRS** shows the stations heard, their positions on the map and their weather.
 
 The entity *TNC connected* and the counter *Packets received* show the same in Home Assistant.
 
@@ -172,7 +173,9 @@ The entity *TNC connected* and the counter *Packets received* show the same in H
 
 Limits: at least 3 seconds between frames and at most 30 frames in 10 minutes (APRS); messages up to 67 characters.
 
-## 8. Packet radio terminal
+## 8. Packet radio terminal and chat
+
+**Chat** (the first tab) is the simplest way to talk: type a line and press **Enter**. It is sent to everyone as an unproto UI frame to `CQ` (or another destination, optionally via digipeaters), starting with your callsign: `OK1SIM-7: Hello`. Everything others type on the frequency appears below with time and callsign. APRS packets are hidden there by default; *Show APRS packets* shows them too. Only transmitting must be switched on.
 
 **Connect to a station** (a BBS, a node, another terminal):
 
@@ -232,6 +235,22 @@ data:
 - `aprs_kiss_message`: an APRS message addressed to you (`from`, `text`, `msg_no`, `path`).
 - `aprs_kiss_packet`: every APRS packet decoded (`from`, `format`, `latitude`, `longitude`, `weather`, `comment`, `raw`, …).
 
+**Automations from a position**: put a callsign (for example your car, `OK1SIM-9`) into *callsigns to track* in the options. Its `device_tracker` then follows the positions it sends, and Home Assistant's zones work with it like with a phone:
+
+```yaml
+triggers:
+  - trigger: zone
+    entity_id: device_tracker.ok1sim_9
+    zone: zone.home
+    event: enter
+actions:
+  - action: light.turn_on
+    target:
+      entity_id: light.garden
+```
+
+The position is as fresh as the station's beacon (every 1–5 minutes typically, more often with smart beaconing). The Proximity integration can use the tracker too (distance and direction to home).
+
 Example: forward APRS messages to your phone.
 
 ```yaml
@@ -271,7 +290,7 @@ python3 -m unittest discover -s tests -t .
 | Nothing received | Right frequency and FM mode in the VFO? Squelch open enough? Receive audio on (key 1) to hear the packets. |
 | Frames sent but nobody hears them | *RX only* off (key 3)? Power in the VFO? Try a longer TX delay in the options (e.g. 300 ms). |
 | A message stays *waiting for ack* | The recipient or the digipeater did not hear it, or their ack did not come back. It is retried 4 times, then marked *no ack*. |
-| Map is empty | Positions come only from stations that send them; the map tiles (OpenStreetMap) need internet in the browser. |
+| Map is empty | Positions come only from stations that send them. The map background comes through Home Assistant's tile proxy (2026.11 or newer), so Home Assistant needs internet; the browser does not. |
 
 Debug logging:
 
@@ -293,12 +312,15 @@ Linux host: kiss_tcp_bridge.py  ──TCP :8001──►  Home Assistant: aprs_k
                                                  └─ panel, entities, services, events
 ```
 
+**Everything comes from Home Assistant**: the panel and the map library (Leaflet, bundled) are served by Home Assistant, and the OpenStreetMap tiles come through Home Assistant's own tile proxy (`/api/map_tiles`, short-lived token). The browser never contacts another server.
+
 The radio only modulates and demodulates; everything above (APRS, acknowledgements, connected-mode link layer with numbering, windows, retransmission) runs in the integration. APRS packets are sent with the tocall `APZHAK` (the experimental range).
 
 ## Credits and licence
 
 - KISS TNC app for F4HWN by **F4WAT**, F4HWN firmware by **Armel F4HWN**.
 - APRS parsing by [aprslib](https://github.com/rossengeorgiev/aprs-python).
+- Maps by [Leaflet](https://leafletjs.com) 1.9.4 (BSD-2-Clause, bundled: `frontend/vendor/LEAFLET-LICENSE`), map data © OpenStreetMap contributors.
 - Written by [Michal Šiman](https://github.com/michalsiman) ([OK1SIM](https://ok1sim.cz/)) together with [Claude Code](https://claude.com/claude-code).
 
 MIT licence, see [LICENSE](LICENSE).

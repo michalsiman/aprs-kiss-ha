@@ -16,7 +16,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, Supp
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
-from .const import DOMAIN, PANEL_URL
+from .const import DOMAIN, PANEL_STATIC, PANEL_URL
 from .hub import Hub
 from .station import TransmitRefused
 
@@ -114,7 +114,8 @@ def _register_services(hass: HomeAssistant) -> None:
 # ─── WebSocket API for the panel ──────────────────────────────────────────
 
 def _register_ws(hass: HomeAssistant) -> None:
-    for handler in (ws_state, ws_connect, ws_disconnect, ws_send_text, ws_send_unproto, ws_send_message, ws_set_tx):
+    for handler in (ws_state, ws_connect, ws_disconnect, ws_send_text, ws_send_unproto, ws_send_message, ws_set_tx,
+                    ws_send_chat):
         websocket_api.async_register_command(hass, handler)
 
 
@@ -134,6 +135,7 @@ async def ws_state(hass, connection, msg):
         "path": hub.conf.get("path", ""),
         "monitor": list(hub.monitor),
         "terminal": list(hub.terminal),
+        "chat": list(hub.chat),
         "sessions": hub.session_states(),
         "messages": [{**m, "state": hub.message_state(m.get("msg_no")) if m["direction"] == "out" else None}
                      for m in hub.messages],
@@ -190,6 +192,19 @@ async def ws_send_unproto(hass, connection, msg):
         _error(connection, msg["id"], err)
 
 
+@websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/send_chat", vol.Required("text"): str,
+                                  vol.Optional("destination", default="CQ"): str, vol.Optional("path", default=""): str,
+                                  vol.Optional("entry_id"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_send_chat(hass, connection, msg):
+    try:
+        await _hub(hass, msg.get("entry_id")).send_chat(msg["text"], msg["destination"], msg["path"])
+        connection.send_result(msg["id"], {})
+    except (TransmitRefused, ConnectionError, ValueError) as err:
+        _error(connection, msg["id"], err)
+
+
 @websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/send_message", vol.Required("to"): str,
                                   vol.Required("text"): str, vol.Optional("entry_id"): str})
 @websocket_api.require_admin
@@ -216,8 +231,10 @@ async def ws_set_tx(hass, connection, msg):
 # ─── panel ────────────────────────────────────────────────────────────────
 
 async def _register_panel(hass: HomeAssistant) -> None:
-    path = Path(__file__).parent / "frontend" / "aprs-kiss-panel.js"
-    await hass.http.async_register_static_paths([StaticPathConfig(PANEL_URL, str(path), cache_headers=False)])
+    folder = Path(__file__).parent / "frontend"
+    path = folder / "aprs-kiss-panel.js"
+    # The panel and its bundled libraries (Leaflet) come from Home Assistant itself.
+    await hass.http.async_register_static_paths([StaticPathConfig(PANEL_STATIC, str(folder), cache_headers=False)])
     version = await hass.async_add_executor_job(lambda: str(int(path.stat().st_mtime)) if path.exists() else "0")
     await panel_custom.async_register_panel(
         hass,

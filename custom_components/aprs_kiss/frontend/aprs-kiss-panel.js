@@ -1,22 +1,30 @@
 /* APRS & Packet panel: packet radio terminal, frame monitor and APRS messages. No build step. */
 
+// Everything the panel needs comes from Home Assistant: Leaflet is bundled with
+// the integration, and map tiles come through Home Assistant's tile proxy.
+const LEAFLET_JS = new URL('vendor/leaflet-src.esm.js', import.meta.url).href;
+const LEAFLET_CSS = new URL('vendor/leaflet.css', import.meta.url).href;
+const TILE_TOKEN_REFRESH_MS = 20 * 60 * 1000;
+
 const TEXTS = {
   en: {
+    chat: 'Chat', showAprs: 'Show APRS packets', chatHint: 'Plain text to everyone: Enter sends it as a UI frame, starting with your callsign.', chatEmpty: 'Nothing heard yet.', chatTo: 'To',
     terminal: 'Terminal', monitor: 'Monitor', aprs: 'APRS', tnc: 'TNC', online: 'connected', offline: 'not connected',
     tx: 'Transmit', on: 'on', off: 'off', connectTo: 'Connect to', via: 'via', connect: 'Connect', disconnect: 'Disconnect',
     unproto: 'Unproto', unprotoTo: 'Unproto to', send: 'Send', typeLine: 'Type and press Enter',
     notConnected: 'Not connected. Enter a callsign and press Connect, or switch to unproto.',
     pause: 'Pause', clear: 'Clear', to: 'To', message: 'Message', messages: 'Messages', heard: 'Stations heard',
-    lastHeard: 'Last heard', position: 'Position', comment: 'Comment', noMessages: 'No messages yet.', map: 'Map', mapOffline: 'The map needs internet for its tiles (OpenStreetMap).', you: 'You',
+    lastHeard: 'Last heard', position: 'Position', comment: 'Comment', noMessages: 'No messages yet.', map: 'Map', mapOffline: 'Map tiles are not available: they come through Home Assistant (2026.11 or newer), which needs internet.', you: 'You',
     txOffHint: 'Transmitting is off. Switch it on to connect or send.', state: { pending: 'waiting for ack', acked: 'acknowledged', rejected: 'rejected', failed: 'no ack', sent: 'sent' },
   },
   cs: {
+    chat: 'Chat', showAprs: 'Zobrazit APRS pakety', chatHint: 'Prostý text pro všechny: Enter ho odešle jako UI rámec, na začátku s tvou značkou.', chatEmpty: 'Zatím nic nepřišlo.', chatTo: 'Komu',
     terminal: 'Terminál', monitor: 'Monitor', aprs: 'APRS', tnc: 'TNC', online: 'připojeno', offline: 'nepřipojeno',
     tx: 'Vysílání', on: 'zapnuto', off: 'vypnuto', connectTo: 'Připojit k', via: 'přes', connect: 'Připojit', disconnect: 'Odpojit',
     unproto: 'Unproto', unprotoTo: 'Unproto na', send: 'Odeslat', typeLine: 'Napiš a stiskni Enter',
     notConnected: 'Nepřipojeno. Zadej značku a stiskni Připojit, nebo přepni na unproto.',
     pause: 'Pozastavit', clear: 'Vymazat', to: 'Komu', message: 'Zpráva', messages: 'Zprávy', heard: 'Slyšené stanice',
-    lastHeard: 'Naposledy', position: 'Poloha', comment: 'Komentář', noMessages: 'Zatím žádné zprávy.', map: 'Mapa', mapOffline: 'Mapa potřebuje internet pro podklad (OpenStreetMap).', you: 'Ty',
+    lastHeard: 'Naposledy', position: 'Poloha', comment: 'Komentář', noMessages: 'Zatím žádné zprávy.', map: 'Mapa', mapOffline: 'Mapový podklad není k dispozici: chodí přes Home Assistant (2026.11 nebo novější), který potřebuje internet.', you: 'Ty',
     txOffHint: 'Vysílání je vypnuté. Zapni ho, abys mohl připojit nebo odeslat.', state: { pending: 'čeká na potvrzení', acked: 'potvrzeno', rejected: 'odmítnuto', failed: 'nepotvrzeno', sent: 'odesláno' },
   },
 };
@@ -48,6 +56,8 @@ class AprsKissPanel extends HTMLElement {
     this._unproto = false;
     this._unprotoTo = 'CQ';
     this._paused = false;
+    this._chatTo = localStorage.getItem('aprs-kiss-chat-to') || 'CQ';
+    this._chatAprs = localStorage.getItem('aprs-kiss-chat-aprs') === '1';
     this._error = '';
   }
 
@@ -121,6 +131,10 @@ class AprsKissPanel extends HTMLElement {
       else this._state.sessions[d.remote] = d.state;
       this._renderHeader();
       if (this._tab === 'terminal') this._renderTerminalControls();
+    } else if (d.kind === 'chat') {
+      this._state.chat = this._state.chat || [];
+      this._state.chat.push(d.entry);
+      if (this._tab === 'chat') this._appendChat(d.entry);
     } else if (d.kind === 'aprs_message') {
       this._state.messages.push(d.message);
       if (this._tab === 'aprs') this._render();
@@ -133,7 +147,7 @@ class AprsKissPanel extends HTMLElement {
 
   _renderShell() {
     this.shadowRoot.innerHTML = `
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+      <link rel="stylesheet" href="${LEAFLET_CSS}">
       <style>
         :host { display: block; height: 100%; background: var(--primary-background-color); color: var(--primary-text-color); font-family: var(--paper-font-body1_-_font-family, Roboto, sans-serif); }
         .page { display: flex; flex-direction: column; height: 100%; max-width: 1100px; margin: 0 auto; box-sizing: border-box; padding: 12px 16px; gap: 10px; }
@@ -155,6 +169,13 @@ class AprsKissPanel extends HTMLElement {
         button.btn.secondary { background: var(--secondary-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color); }
         button.btn:disabled { opacity: 0.5; cursor: default; }
         pre { flex: 1; min-height: 200px; margin: 0; overflow: auto; padding: 10px 12px; border-radius: 10px; background: #111; color: #d0d0d0; font: 13px/1.45 ui-monospace, 'DejaVu Sans Mono', Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+        .chatlog { flex: 1; min-height: 200px; overflow: auto; padding: 8px 10px; border-radius: 10px; background: var(--card-background-color); border: 1px solid var(--divider-color); font-size: 14px; }
+        .chatline { padding: 3px 0; line-height: 1.4; word-break: break-word; }
+        .chatline .t { color: var(--secondary-text-color); font-size: 12px; margin-right: 6px; font-variant-numeric: tabular-nums; }
+        .chatline .c { font-weight: 600; margin-right: 4px; }
+        .chatline.out .c { color: var(--primary-color); }
+        .chatline.aprs { color: var(--secondary-text-color); font-size: 13px; }
+        .chatline .to { color: var(--secondary-text-color); font-size: 12px; margin-right: 4px; }
         pre .tx { color: #4fc3f7; } pre .st { color: #ffb74d; font-style: italic; } pre .out { color: #81c784; }
         .line { display: flex; gap: 8px; } .line input { flex: 1; font-family: ui-monospace, monospace; }
         .hint { font-size: 13px; color: var(--secondary-text-color); }
@@ -185,7 +206,7 @@ class AprsKissPanel extends HTMLElement {
     this._renderHeader();
     const t = this._t;
     const nav = this.shadowRoot.querySelector('nav');
-    nav.innerHTML = ['terminal', 'monitor', 'aprs'].map((k) => `<button data-tab="${k}" class="${this._tab === k ? 'active' : ''}">${t[k]}</button>`).join('');
+    nav.innerHTML = ['chat', 'terminal', 'monitor', 'aprs'].map((k) => `<button data-tab="${k}" class="${this._tab === k ? 'active' : ''}">${t[k]}</button>`).join('');
     nav.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
       this._tab = b.dataset.tab;
       localStorage.setItem('aprs-kiss-tab', this._tab);
@@ -196,7 +217,8 @@ class AprsKissPanel extends HTMLElement {
       main.innerHTML = `<div class="error">${esc(this._error)}</div>`;
       return;
     }
-    if (this._tab === 'terminal') this._renderTerminal(main);
+    if (this._tab === 'chat') this._renderChat(main);
+    else if (this._tab === 'terminal') this._renderTerminal(main);
     else if (this._tab === 'monitor') this._renderMonitor(main);
     else this._renderAprs(main);
   }
@@ -313,6 +335,63 @@ class AprsKissPanel extends HTMLElement {
     if (atBottom) pre.scrollTop = pre.scrollHeight;
   }
 
+  // ─── chat ────────────────────────────────────────────────────────────
+
+  _renderChat(main) {
+    const t = this._t;
+    main.innerHTML = `
+      <div class="row">
+        <label>${t.chatTo} <input class="call chatto" value="${esc(this._chatTo)}"></label>
+        <label>${t.via} <input class="path chatpath" value="${esc(this._path)}" placeholder="WIDE1-1"></label>
+        <label><input type="checkbox" class="chataprs" ${this._chatAprs ? 'checked' : ''}> ${t.showAprs}</label>
+      </div>
+      <div class="chatlog"></div>
+      <div class="line"><input class="chatinput" placeholder="${esc(this._state.callsign)}: …" autocomplete="off" maxlength="200"><button class="btn chatsend">${t.send}</button></div>
+      <div class="hint">${this._state.tx_enabled ? t.chatHint : t.txOffHint}</div>
+      <div class="error">${esc(this._error)}</div>`;
+    const log = main.querySelector('.chatlog');
+    const lines = (this._state.chat || []).filter((e) => this._chatAprs || !e.aprs);
+    if (!lines.length) log.innerHTML = `<div class="hint">${t.chatEmpty}</div>`;
+    for (const e of lines) this._appendChat(e, log);
+    log.scrollTop = log.scrollHeight;
+    main.querySelector('.chatto').addEventListener('change', (e) => {
+      this._chatTo = e.target.value.trim().toUpperCase() || 'CQ';
+      localStorage.setItem('aprs-kiss-chat-to', this._chatTo);
+    });
+    main.querySelector('.chatpath').addEventListener('change', (e) => {
+      this._path = e.target.value.trim().toUpperCase();
+      localStorage.setItem('aprs-kiss-path', this._path);
+    });
+    main.querySelector('.chataprs').addEventListener('change', (e) => {
+      this._chatAprs = e.target.checked;
+      localStorage.setItem('aprs-kiss-chat-aprs', this._chatAprs ? '1' : '0');
+      this._renderChat(main);
+    });
+    const input = main.querySelector('.chatinput');
+    const send = async () => {
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      const ok = await this._ws({ type: 'aprs_kiss/send_chat', text, destination: this._chatTo, path: this._path });
+      if (!ok) input.value = text;
+    };
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
+    main.querySelector('.chatsend').addEventListener('click', send);
+    input.focus();
+  }
+
+  _appendChat(e, log = this.shadowRoot.querySelector('.chatlog')) {
+    if (!log || (e.aprs && !this._chatAprs)) return;
+    log.querySelector(':scope > .hint')?.remove();
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+    const div = document.createElement('div');
+    div.className = `chatline${e.out ? ' out' : ''}${e.aprs ? ' aprs' : ''}`;
+    const to = e.to && !['CQ', 'APRS'].includes(e.to) && !e.to.startsWith('AP') ? `<span class="to">→ ${esc(e.to)}</span>` : '';
+    div.innerHTML = `<span class="t">${time(e.time)}</span><span class="c">${esc(e.from)}:</span>${to}${esc(e.text)}`;
+    log.appendChild(div);
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  }
+
   // ─── monitor ─────────────────────────────────────────────────────────
 
   _renderMonitor(main) {
@@ -375,16 +454,38 @@ class AprsKissPanel extends HTMLElement {
   }
 }
 
-AprsKissPanel.prototype._renderMap = async function renderMap(el, heard) {
-  let L;
+AprsKissPanel.prototype._tileToken = async function tileToken() {
+  const now = Date.now();
+  if (this._tile && now - this._tile.at < TILE_TOKEN_REFRESH_MS) return this._tile.token;
   try {
-    L = (await import('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/+esm')).default;
+    const r = await this._hass.callWS({ type: 'map_tiles/access_token' });
+    this._tile = { token: r.token, at: now };
+    return r.token;
   } catch {
-    el.innerHTML = `<div class="hint" style="padding:12px">${this._t.mapOffline}</div>`;
-    return;
+    return null;
   }
+};
+
+AprsKissPanel.prototype._renderMap = async function renderMap(el, heard) {
+  const mod = await import(LEAFLET_JS);
+  const L = mod.default ?? mod;  // the ESM build has named exports only
   const map = L.map(el, { zoomControl: true, attributionControl: true });
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
+  const tileUrl = (token) => `/api/map_tiles/raster/{z}/{x}/{y}.png?token=${encodeURIComponent(token)}`;
+  const token = await this._tileToken();
+  if (token) {
+    const layer = L.tileLayer(tileUrl(token), { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
+    // The token rotates; keep the layer working while the panel stays open.
+    clearInterval(this._tileTimer);
+    this._tileTimer = setInterval(async () => {
+      if (!el.isConnected) { clearInterval(this._tileTimer); return; }
+      const t = await this._tileToken();
+      if (t) layer.setUrl(tileUrl(t), true);
+    }, TILE_TOKEN_REFRESH_MS);
+  } else {
+    const note = L.control({ position: 'bottomleft' });
+    note.onAdd = () => Object.assign(document.createElement('div'), { className: 'hint', textContent: this._t.mapOffline, style: 'background:var(--card-background-color);padding:4px 8px;border-radius:6px' });
+    note.addTo(map);
+  }
   const points = [];
   const home = [this._hass.config.latitude, this._hass.config.longitude];
   L.circleMarker(home, { radius: 8, color: '#fff', weight: 2, fillColor: '#1e88e5', fillOpacity: 1 })

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0] - 2026-11-16
+
+- Everything the panel uses comes from Home Assistant: Leaflet is bundled with the integration, and map tiles come through Home Assistant's tile proxy (`/api/map_tiles`, HA 2026.11+) instead of the browser fetching CDN files and OpenStreetMap tiles itself (which OpenStreetMap blocked).
+- Chat tab: type and press Enter, the text goes to everyone as an unproto UI frame starting with your callsign; everything others type on the frequency is listed below (APRS packets hidden unless switched on).
+- README: automations from a tracked station entering a zone.
+- Simulator: plain-text CQ traffic and replies to chat.
+
 ## [0.1.1] - 2026-11-16
 
 - Requirement aprslib as a minimum version (aprslib>=0.7.2), as Home Assistant requires for packages it also uses.

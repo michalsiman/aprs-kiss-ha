@@ -26,4 +26,5 @@ EVENT_TERMINAL = f"{DOMAIN}_terminal"  # monitor lines, session text and states 
 
 SIGNAL_UPDATE = f"{DOMAIN}_update_{{}}"  # .format(entry_id)
 
-PANEL_URL = "/aprs_kiss_panel/aprs-kiss-panel.js"
+PANEL_STATIC = "/aprs_kiss_panel"
+PANEL_URL = f"{PANEL_STATIC}/aprs-kiss-panel.js"
