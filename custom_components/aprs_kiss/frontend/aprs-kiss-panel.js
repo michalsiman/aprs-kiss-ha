@@ -37,23 +37,29 @@ const COG = 'M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15
 
 const TEXTS = {
   en: {
-    settings: 'Settings', callsign: 'Callsign', ssid: 'SSID', symbol: 'Icon (APRS symbol)', comment: 'Position comment', path: 'Digipeater path', beacon: 'Send position every (minutes, 0 = off, at least 10)', tracked: 'Callsigns to track on the map', incoming: 'Accept incoming packet connections', txdelay: 'TX delay sent to the TNC (ms, 0 = leave)', station: 'Station', aprsis: 'APRS-IS (internet)', aprsisOn: 'Connect to APRS-IS', server: 'Server', port: 'Port', passcode: 'APRS-IS password (passcode)', show: 'Show', hide: 'Hide', passHint: 'Empty: computed from your callsign (the standard APRS-IS passcode). Enter your own if you were given a different one.', passOwn: 'Your own passcode is saved. Clear the field to compute it from the callsign.', radius: 'Receive packets within (km of home, 0 = none)', igateRx: 'iGate: send packets heard on the radio to APRS-IS', igateTx: 'iGate: send internet messages to local stations by radio', save: 'Save', saved: 'Saved; the integration restarts with the new settings.', isState: 'APRS-IS', verified: 'logged in', unverified: 'connected, not verified (check the passcode)', disconnectedIs: 'not connected', passAuto: 'computed automatically', igateHint: 'Sending to APRS-IS needs no transmitter; gating to the radio needs Transmit on and a licence.', ssidHint: 'Usual meanings of the SSID:',
-    chat: 'Chat', showAprs: 'Show APRS packets', chatHint: 'Plain text to everyone: Enter sends it as a UI frame, starting with your callsign.', chatEmpty: 'Nothing heard yet.', chatTo: 'To',
+    settings: 'Settings', callsign: 'Callsign', ssid: 'SSID', symbol: 'Icon (APRS symbol)', comment: 'Position comment', path: 'Digipeater path', beacon: 'Send position every (minutes, 0 = off, at least 10)', tracked: 'Callsigns to track on the map', incoming: 'Accept incoming packet connections', txdelay: 'TX delay sent to the TNC (ms, 0 = leave)', station: 'Station', aprsis: 'APRS-IS (internet)', aprsisOn: 'Connect to APRS-IS', server: 'Server', port: 'Port', passcode: 'APRS-IS password (passcode)', licenceAsk: 'APRS-IS is for licensed radio amateurs only. To switch it on, type:', licenceText: 'I hold a valid amateur radio licence', licenceRequired: 'To switch APRS-IS on, type the sentence about your licence exactly as shown.', show: 'Show', hide: 'Hide', passHint: 'Empty: computed from your callsign (the standard APRS-IS passcode). Enter your own if you were given a different one.', passOwn: 'Your own passcode is saved. Clear the field to compute it from the callsign.', radius: 'Receive packets within (km of home, 0 = none)', igateRx: 'iGate: send packets heard on the radio to APRS-IS', igateTx: 'iGate: send internet messages to local stations by radio', unsaved: 'Changes are not saved yet: press Save.', save: 'Save', saved: 'Saved; the integration restarts with the new settings.', isState: 'APRS-IS', verified: 'logged in', unverified: 'connected, not verified (check the passcode)', disconnectedIs: 'not connected', passAuto: 'computed automatically', igateHint: 'Sending to APRS-IS needs no transmitter; gating to the radio needs Transmit on and a licence.', ssidHint: 'Usual meanings of the SSID:',
+    newVersion: 'A new version of APRS & Packet is installed. Reload the page to use it.', reload: 'Reload page',
+    chat: 'Chat', chatHint: 'Packet chat: Enter sends the text to everyone on the frequency as it is (a UI frame to CQ, direct).', chatPh: 'Write a message', chatEmpty: 'Nothing heard yet.',
+    viaIs: 'only over the internet (APRS-IS)', isLegend: '🌐 = only over the internet (APRS-IS), not heard by the radio',
     terminal: 'Terminal', monitor: 'Monitor', aprs: 'APRS', tnc: 'TNC', online: 'connected', offline: 'not connected',
     tx: 'Transmit', on: 'on', off: 'off', connectTo: 'Connect to', via: 'via', connect: 'Connect', disconnect: 'Disconnect',
     unproto: 'Unproto', unprotoTo: 'Unproto to', send: 'Send', typeLine: 'Type and press Enter',
     notConnected: 'Not connected. Enter a callsign and press Connect, or switch to unproto.',
+    showIs: 'From the internet (APRS-IS)', viaRadio: 'Radio', viaNet: 'Internet', viaTitle: 'Send the message by radio or over the internet (APRS-IS)', errTxOff: 'Transmitting is off: switch it on, or send over the internet.', errIsOff: 'APRS-IS is not connected (Settings), or send by radio.',
     pause: 'Pause', clear: 'Clear', to: 'To', message: 'Message', messages: 'Messages', heard: 'Stations heard',
     lastHeard: 'Last heard', position: 'Position', comment: 'Comment', noMessages: 'No messages yet.', map: 'Map', mapOffline: 'Map tiles are not available: they come through Home Assistant (2026.11 or newer), which needs internet.', you: 'You',
     txOffHint: 'Transmitting is off. Switch it on to connect or send.', state: { pending: 'waiting for ack', acked: 'acknowledged', rejected: 'rejected', failed: 'no ack', sent: 'sent' },
   },
   cs: {
-    settings: 'Nastavení', callsign: 'Značka', ssid: 'SSID', symbol: 'Ikona (APRS symbol)', comment: 'Komentář k poloze', path: 'Cesta přes digipeatery', beacon: 'Posílat polohu každých (minut, 0 = ne, nejméně 10)', tracked: 'Značky sledované na mapě', incoming: 'Přijímat příchozí packet spojení', txdelay: 'TX delay pro TNC (ms, 0 = neměnit)', station: 'Stanice', aprsis: 'APRS-IS (internet)', aprsisOn: 'Připojit se k APRS-IS', server: 'Server', port: 'Port', passcode: 'Heslo pro APRS-IS (passcode)', show: 'Zobrazit', hide: 'Skrýt', passHint: 'Prázdné: spočítá se z tvé značky (standardní passcode APRS-IS). Zadej vlastní, pokud ti bylo přiděleno jiné.', passOwn: 'Je uložené tvoje vlastní heslo. Smazáním pole se bude počítat ze značky.', radius: 'Přijímat pakety do (km od domova, 0 = žádné)', igateRx: 'iGate: posílat pakety slyšené rádiem do APRS-IS', igateTx: 'iGate: zprávy z internetu pro místní stanice vysílat rádiem', save: 'Uložit', saved: 'Uloženo; integrace se restartuje s novým nastavením.', isState: 'APRS-IS', verified: 'přihlášeno', unverified: 'připojeno, neověřeno (zkontroluj passcode)', disconnectedIs: 'nepřipojeno', passAuto: 'spočítá se automaticky', igateHint: 'Posílání do APRS-IS nepotřebuje vysílač; brána do rádia potřebuje zapnuté vysílání a licenci.', ssidHint: 'Obvyklé významy SSID:',
-    chat: 'Chat', showAprs: 'Zobrazit APRS pakety', chatHint: 'Prostý text pro všechny: Enter ho odešle jako UI rámec, na začátku s tvou značkou.', chatEmpty: 'Zatím nic nepřišlo.', chatTo: 'Komu',
+    settings: 'Nastavení', callsign: 'Značka', ssid: 'SSID', symbol: 'Ikona (APRS symbol)', comment: 'Komentář k poloze', path: 'Cesta přes digipeatery', beacon: 'Posílat polohu každých (minut, 0 = ne, nejméně 10)', tracked: 'Značky sledované na mapě', incoming: 'Přijímat příchozí packet spojení', txdelay: 'TX delay pro TNC (ms, 0 = neměnit)', station: 'Stanice', aprsis: 'APRS-IS (internet)', aprsisOn: 'Připojit se k APRS-IS', server: 'Server', port: 'Port', passcode: 'Heslo pro APRS-IS (passcode)', licenceAsk: 'APRS-IS je jen pro radioamatéry s licencí. Pro zapnutí napiš:', licenceText: 'mám platnou radioamatérskou licenci', licenceRequired: 'Pro zapnutí APRS-IS napiš větu o licenci přesně tak, jak je uvedená.', show: 'Zobrazit', hide: 'Skrýt', passHint: 'Prázdné: spočítá se z tvé značky (standardní passcode APRS-IS). Zadej vlastní, pokud ti bylo přiděleno jiné.', passOwn: 'Je uložené tvoje vlastní heslo. Smazáním pole se bude počítat ze značky.', radius: 'Přijímat pakety do (km od domova, 0 = žádné)', igateRx: 'iGate: posílat pakety slyšené rádiem do APRS-IS', igateTx: 'iGate: zprávy z internetu pro místní stanice vysílat rádiem', unsaved: 'Změny ještě nejsou uložené: klikni na Uložit.', save: 'Uložit', saved: 'Uloženo; integrace se restartuje s novým nastavením.', isState: 'APRS-IS', verified: 'přihlášeno', unverified: 'připojeno, neověřeno (zkontroluj passcode)', disconnectedIs: 'nepřipojeno', passAuto: 'spočítá se automaticky', igateHint: 'Posílání do APRS-IS nepotřebuje vysílač; brána do rádia potřebuje zapnuté vysílání a licenci.', ssidHint: 'Obvyklé významy SSID:',
+    newVersion: 'Je nainstalovaná nová verze APRS & Packet. Načti stránku znovu, aby se použila.', reload: 'Načíst znovu',
+    chat: 'Chat', chatHint: 'Packetový chat: Enter odešle text tak, jak je, všem na kmitočtu (UI rámec na CQ, přímo).', chatPh: 'Napiš zprávu', chatEmpty: 'Zatím nic nepřišlo.',
+    viaIs: 'jen přes internet (APRS-IS)', isLegend: '🌐 = jen přes internet (APRS-IS), rádio ji neslyšelo',
     terminal: 'Terminál', monitor: 'Monitor', aprs: 'APRS', tnc: 'TNC', online: 'připojeno', offline: 'nepřipojeno',
     tx: 'Vysílání', on: 'zapnuto', off: 'vypnuto', connectTo: 'Připojit k', via: 'přes', connect: 'Připojit', disconnect: 'Odpojit',
     unproto: 'Unproto', unprotoTo: 'Unproto na', send: 'Odeslat', typeLine: 'Napiš a stiskni Enter',
     notConnected: 'Nepřipojeno. Zadej značku a stiskni Připojit, nebo přepni na unproto.',
+    showIs: 'Z internetu (APRS-IS)', viaRadio: 'Rádio', viaNet: 'Internet', viaTitle: 'Poslat zprávu rádiem, nebo přes internet (APRS-IS)', errTxOff: 'Vysílání je vypnuté: zapni ho, nebo pošli přes internet.', errIsOff: 'APRS-IS není připojené (Nastavení), nebo pošli rádiem.',
     pause: 'Pozastavit', clear: 'Vymazat', to: 'Komu', message: 'Zpráva', messages: 'Zprávy', heard: 'Slyšené stanice',
     lastHeard: 'Naposledy', position: 'Poloha', comment: 'Komentář', noMessages: 'Zatím žádné zprávy.', map: 'Mapa', mapOffline: 'Mapový podklad není k dispozici: chodí přes Home Assistant (2026.11 nebo novější), který potřebuje internet.', you: 'Ty',
     txOffHint: 'Vysílání je vypnuté. Zapni ho, abys mohl připojit nebo odeslat.', state: { pending: 'čeká na potvrzení', acked: 'potvrzeno', rejected: 'odmítnuto', failed: 'nepotvrzeno', sent: 'odesláno' },
@@ -73,6 +79,7 @@ const wxText = (w) => {
   return parts.join(' · ');
 };
 
+const isIsLine = (line) => / (<<|>>) \[IS\] /.test(line);  // a monitor line from or to APRS-IS
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const time = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
@@ -87,8 +94,7 @@ class AprsKissPanel extends HTMLElement {
     this._unproto = false;
     this._unprotoTo = 'CQ';
     this._paused = false;
-    this._chatTo = localStorage.getItem('aprs-kiss-chat-to') || 'CQ';
-    this._chatAprs = localStorage.getItem('aprs-kiss-chat-aprs') === '1';
+    this._monIs = localStorage.getItem('aprs-kiss-mon-is') !== '0';  // APRS-IS lines in the monitor
     this._error = '';
   }
 
@@ -138,16 +144,62 @@ class AprsKissPanel extends HTMLElement {
       window.visualViewport.addEventListener('scroll', this._onVv);
       this._fitViewport();
     }
+    if (this._hass && this.shadowRoot.querySelector('main')) this._attach();
+  }
+
+  // Like MeshCore Chattx: after an update Home Assistant serves the panel under a new
+  // ?v= (the file's time); a page that still runs the old copy offers a reload.
+  async _checkForUpdate() {
+    try {
+      const panels = await this._hass.callWS({ type: 'get_panels' });
+      const url = panels?.['aprs-packet']?.config?._panel_custom?.module_url;
+      const served = url && new URL(url, location.href).searchParams.get('v');
+      const mine = new URL(import.meta.url).searchParams.get('v');
+      this._updateAvailable = !!(served && mine && served !== mine);
+    } catch (err) {
+      return;
+    }
+    this._renderUpdate();
+  }
+
+  _renderUpdate() {
+    const box = this.shadowRoot.querySelector('.update');
+    if (!box) return;
+    box.hidden = !this._updateAvailable;
+    if (this._updateAvailable && !box.firstChild) {
+      box.innerHTML = `<span>${this._t.newVersion}</span><button type="button">${this._t.reload}</button>`;
+      box.querySelector('button').addEventListener('click', () => window.location.reload());
+    }
   }
 
   async _init() {
     this._renderShell();
+    await this._attach();
+  }
+
+  // Listeners while the panel is on screen; Home Assistant detaches the panel when
+  // another one is opened and attaches the same element again on the way back.
+  async _attach() {
+    if (this._attached) return;
+    this._attached = true;
+    this._onReady = () => { this._load(); this._checkForUpdate(); };
+    this._hass.connection.addEventListener?.('ready', this._onReady);
+    this._onVisible = () => { if (document.visibilityState === 'visible') this._checkForUpdate(); };
+    document.addEventListener('visibilitychange', this._onVisible);
+    this._checkForUpdate();
     await this._load();
-    this._unsub = await this._hass.connection.subscribeEvents((e) => this._onEvent(e.data), 'aprs_kiss_terminal');
-    this._unsubState = await this._hass.connection.subscribeEvents(() => this._loadSoon(), 'state_changed');
+    const unsub = await this._hass.connection.subscribeEvents((e) => this._onEvent(e.data), 'aprs_kiss_terminal');
+    const unsubState = await this._hass.connection.subscribeEvents(() => this._loadSoon(), 'state_changed');
+    if (!this._attached) { unsub(); unsubState(); return; }  // detached meanwhile
+    this._unsub = unsub;
+    this._unsubState = unsubState;
   }
 
   disconnectedCallback() {
+    this._attached = false;
+    if (this._onVisible) document.removeEventListener('visibilitychange', this._onVisible);
+    if (this._onReady) this._hass?.connection.removeEventListener?.('ready', this._onReady);
+    this._onVisible = this._onReady = null;
     if (this._onVv) {
       window.visualViewport.removeEventListener('resize', this._onVv);
       window.visualViewport.removeEventListener('scroll', this._onVv);
@@ -156,6 +208,7 @@ class AprsKissPanel extends HTMLElement {
     }
     this._unsub?.();
     this._unsubState?.();
+    this._unsub = this._unsubState = null;
   }
 
   async _ws(msg) {
@@ -189,7 +242,7 @@ class AprsKissPanel extends HTMLElement {
       const s = await this._hass.callWS({ type: 'aprs_kiss/state', entry_id: this._state.entry_id });
       Object.assign(this._state, { tnc_connected: s.tnc_connected, tx_enabled: s.tx_enabled, sessions: s.sessions, messages: s.messages, heard: s.heard });
       this._renderHeader();
-      if (this._tab === 'aprs') this._render();
+      if (this._tab === 'aprs') this._updateAprs();
     } catch { /* keep the last state */ }
   }
 
@@ -230,6 +283,9 @@ class AprsKissPanel extends HTMLElement {
         /* Like a Home Assistant dashboard: the header with the menu button and the tabs stay on top while the rest scrolls. */
         .top { position: sticky; top: 0; z-index: 10; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;
                margin: -12px -16px 0; padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 0; background: var(--primary-background-color); }
+        .update { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 10px; background: var(--warning-color, #ff9800); color: #000; font-size: 14px; }
+        .update[hidden] { display: none; } .update span { flex: 1; }
+        .update button { padding: 6px 12px; border: none; border-radius: 6px; background: rgba(0, 0, 0, 0.8); color: #fff; font: inherit; cursor: pointer; white-space: nowrap; }
         header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
         h1 { font-size: 20px; margin: 0 8px 0 0; font-weight: 500; }
         .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 14px; font-size: 13px; background: var(--secondary-background-color); border: 1px solid var(--divider-color); }
@@ -246,6 +302,8 @@ class AprsKissPanel extends HTMLElement {
         input, select { font: inherit; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color); }
         input.call { width: 120px; text-transform: uppercase; } input.path { width: 160px; text-transform: uppercase; }
         button.btn { font: inherit; padding: 7px 14px; border-radius: 8px; border: none; background: var(--primary-color); color: var(--text-primary-color, #fff); cursor: pointer; }
+        button.btn.save.dirty { box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.6); }
+        .warn { color: var(--warning-color, #ff9800); }
         button.btn.secondary { background: var(--secondary-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color); }
         button.btn:disabled { opacity: 0.5; cursor: default; }
         pre { flex: 1; min-height: 200px; margin: 0; overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--code-editor-background-color, var(--card-background-color)); color: var(--primary-text-color); border: 1px solid var(--divider-color); font: 13px/1.45 ui-monospace, 'DejaVu Sans Mono', Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
@@ -254,7 +312,6 @@ class AprsKissPanel extends HTMLElement {
         .chatline .t { color: var(--secondary-text-color); font-size: 12px; margin-right: 6px; font-variant-numeric: tabular-nums; }
         .chatline .c { font-weight: 600; margin-right: 4px; }
         .chatline.out .c { color: var(--primary-color); }
-        .chatline.aprs { color: var(--secondary-text-color); font-size: 13px; }
         .chatline .to { color: var(--secondary-text-color); font-size: 12px; margin-right: 4px; }
         .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 12px; overflow: auto; padding-bottom: 12px; }
         .form .card { display: flex; flex-direction: column; gap: 10px; overflow: visible; min-height: auto; min-width: 0; }
@@ -285,6 +342,10 @@ class AprsKissPanel extends HTMLElement {
         nav { overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
         nav::-webkit-scrollbar { display: none; }
         nav button { flex-shrink: 0; white-space: nowrap; }
+        .seg { display: inline-flex; border: 1px solid var(--divider-color); border-radius: 8px; overflow: hidden; flex: none; }
+        .seg button { font: inherit; font-size: 14px; padding: 7px 10px; border: none; background: var(--card-background-color); color: var(--secondary-text-color); cursor: pointer; white-space: nowrap; }
+        .seg button + button { border-left: 1px solid var(--divider-color); }
+        .seg button.on { background: var(--primary-color); color: var(--text-primary-color, #fff); }
         .msgrow .to { width: 120px; } .msgrow .text { flex: 1; min-width: 160px; }
         main.scroll { overflow-y: auto; }
         main.scroll .cols { flex: none; } main.scroll .card { flex-shrink: 0; }
@@ -301,7 +362,13 @@ class AprsKissPanel extends HTMLElement {
           .controls input { flex: 1; width: auto; min-width: 0; }
           .row label { flex: 1 1 140px; display: flex; align-items: center; gap: 6px; } .row label input { flex: 1; min-width: 0; width: auto; }
           .controls label input[type=checkbox], .row label input[type=checkbox] { flex: none; width: auto; }
-          .msgrow .to { width: 100px; } .msgrow .text { min-width: 0; flex: 1 1 140px; } .msgrow .btn { flex: 1 0 100%; }
+          .msgrow { flex-wrap: wrap; } .msgrow .to { width: auto; flex: 1 1 40%; min-width: 0; } .msgrow .text { min-width: 0; flex: 1 1 60%; } .msgrow .btn { flex: none; }
+          /* APRS on a phone: the message form and the map stay put, only the lists below scroll. */
+          main.aprs { overflow: hidden; }
+          main.aprs .cols { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; }
+          main.aprs .cols .card { flex-shrink: 0; overflow: visible; }
+          main.aprs .msgs { max-height: none; }
+          main.aprs .map { height: 220px; }
           pre { font-size: 12px; padding: 8px; }
           .map { height: 260px; }
           .msgs { max-height: 50vh; }
@@ -320,7 +387,7 @@ class AprsKissPanel extends HTMLElement {
         .call-label::before { display: none; }
       </style>
 
-      <div class="page"><div class="top"><header></header><nav></nav></div><main></main></div>`;
+      <div class="page"><div class="top"><div class="update" hidden></div><header></header><nav></nav></div><main></main></div>`;
   }
 
   _render() {
@@ -337,7 +404,7 @@ class AprsKissPanel extends HTMLElement {
       this._render();
     }));
     const main = this.shadowRoot.querySelector('main');
-    main.classList.remove('scroll');
+    main.classList.remove('scroll', 'aprs');
     if (!this._state) {
       main.innerHTML = `<div class="error">${esc(this._error)}</div>`;
       return;
@@ -503,6 +570,8 @@ class AprsKissPanel extends HTMLElement {
         </div>
         <div class="card"><h2>${t.aprsis}</h2>
           <label class="field check"><input type="checkbox" class="f-is" ${st.aprsis_enabled ? 'checked' : ''}> ${t.aprsisOn}</label>
+          <label class="field f-licence-box" hidden>${t.licenceAsk} <b>${t.licenceText}</b>
+            <input class="f-licence" autocomplete="off" placeholder="${t.licenceText}"></label>
           ${isLine}
           <label class="field">${t.server}<input class="f-host" value="${esc(st.aprsis_host || 'euro.aprs2.net')}"></label>
           <label class="field">${t.port}<input class="f-port" type="number" value="${st.aprsis_port || 14580}"></label>
@@ -523,6 +592,16 @@ class AprsKissPanel extends HTMLElement {
       f.type = f.type === 'password' ? 'text' : 'password';
       q('.f-showpass').textContent = f.type === 'password' ? t.show : t.hide;
     });
+    // Switching APRS-IS on asks for the licence statement (checked again by the integration).
+    const licenceBox = () => { q('.f-licence-box').hidden = !(q('.f-is').checked && !st.aprsis_enabled); };
+    q('.f-is').addEventListener('change', () => { licenceBox(); if (!q('.f-licence-box').hidden) q('.f-licence').focus(); });
+    // Nothing applies until Save: say so as soon as something changes.
+    const markDirty = () => {
+      q('.save').classList.add('dirty');
+      q('.msg-saved').innerHTML = `<span class="warn">${t.unsaved}</span>`;
+    };
+    main.querySelector('.form').addEventListener('input', markDirty);
+    main.querySelector('.form').addEventListener('change', markDirty);
     q('.f-ssid').addEventListener('change', (e) => { q('.ssid-meaning').textContent = SSIDS[cs ? 'cs' : 'en'][Number(e.target.value)]; });
     q('.save').addEventListener('click', async () => {
       const call = q('.f-call').value.trim().toUpperCase();
@@ -535,9 +614,22 @@ class AprsKissPanel extends HTMLElement {
         aprsis_enabled: q('.f-is').checked, aprsis_host: q('.f-host').value.trim(), aprsis_port: Number(q('.f-port').value) || 14580,
         aprsis_passcode: q('.f-pass').value.trim(), aprsis_radius_km: Number(q('.f-radius').value) || 0,
         igate_rx: q('.f-irx').checked, igate_tx: q('.f-itx').checked,
+        licence_text: q('.f-licence').value,
       };
-      const r = await this._ws({ type: 'aprs_kiss/set_settings', settings });
+      // Errors stay next to the button; re-rendering would lose what was typed.
+      const err = main.querySelector('.row .error');
+      err.textContent = '';
+      let r = null;
+      try {
+        r = await this._hass.callWS({ type: 'aprs_kiss/set_settings', settings, entry_id: this._state?.entry_id });
+      } catch (e) {
+        const text = e.message || String(e);
+        err.textContent = /licence_required/.test(text) ? t.licenceRequired : text;
+        if (/licence_required/.test(text)) { licenceBox(); q('.f-licence').focus(); }
+        return;
+      }
       if (r) {
+        q('.save').classList.remove('dirty');
         q('.msg-saved').innerHTML = `<span class="ok">${t.saved}</span>`;
         setTimeout(async () => { await this._load(); }, 4000);
       }
@@ -549,39 +641,21 @@ class AprsKissPanel extends HTMLElement {
   _renderChat(main) {
     const t = this._t;
     main.innerHTML = `
-      <div class="row">
-        <label>${t.chatTo} <input class="call chatto" value="${esc(this._chatTo)}"></label>
-        <label>${t.via} <input class="path chatpath" value="${esc(this._path)}" placeholder="WIDE1-1"></label>
-        <label><input type="checkbox" class="chataprs" ${this._chatAprs ? 'checked' : ''}> ${t.showAprs}</label>
-      </div>
       <div class="chatlog"></div>
-      <div class="line"><input class="chatinput" placeholder="${esc(this._state.callsign)}: …" autocomplete="off" maxlength="200"><button class="btn chatsend">${t.send}</button></div>
+      <div class="line"><input class="chatinput" placeholder="${t.chatPh}" autocomplete="off" maxlength="200"><button class="btn chatsend">${t.send}</button></div>
       <div class="hint">${this._state.tx_enabled ? t.chatHint : t.txOffHint}</div>
       <div class="error">${esc(this._error)}</div>`;
     const log = main.querySelector('.chatlog');
-    const lines = (this._state.chat || []).filter((e) => this._chatAprs || !e.aprs);
+    const lines = (this._state.chat || []).filter((e) => !e.aprs);
     if (!lines.length) log.innerHTML = `<div class="hint">${t.chatEmpty}</div>`;
     for (const e of lines) this._appendChat(e, log);
     log.scrollTop = log.scrollHeight;
-    main.querySelector('.chatto').addEventListener('change', (e) => {
-      this._chatTo = e.target.value.trim().toUpperCase() || 'CQ';
-      localStorage.setItem('aprs-kiss-chat-to', this._chatTo);
-    });
-    main.querySelector('.chatpath').addEventListener('change', (e) => {
-      this._path = e.target.value.trim().toUpperCase();
-      localStorage.setItem('aprs-kiss-path', this._path);
-    });
-    main.querySelector('.chataprs').addEventListener('change', (e) => {
-      this._chatAprs = e.target.checked;
-      localStorage.setItem('aprs-kiss-chat-aprs', this._chatAprs ? '1' : '0');
-      this._renderChat(main);
-    });
     const input = main.querySelector('.chatinput');
     const send = async () => {
       const text = input.value.trim();
       if (!text) return;
       input.value = '';
-      const ok = await this._ws({ type: 'aprs_kiss/send_chat', text, destination: this._chatTo, path: this._path });
+      const ok = await this._ws({ type: 'aprs_kiss/send_chat', text });
       if (!ok) input.value = text;
     };
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
@@ -590,11 +664,11 @@ class AprsKissPanel extends HTMLElement {
   }
 
   _appendChat(e, log = this.shadowRoot.querySelector('.chatlog')) {
-    if (!log || (e.aprs && !this._chatAprs)) return;
+    if (!log || e.aprs) return;
     log.querySelector(':scope > .hint')?.remove();
     const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
     const div = document.createElement('div');
-    div.className = `chatline${e.out ? ' out' : ''}${e.aprs ? ' aprs' : ''}`;
+    div.className = `chatline${e.out ? ' out' : ''}`;
     const to = e.to && !['CQ', 'APRS'].includes(e.to) && !e.to.startsWith('AP') ? `<span class="to">→ ${esc(e.to)}</span>` : '';
     div.innerHTML = `<span class="t">${time(e.time)}</span><span class="c">${esc(e.from)}:</span>${to}${esc(e.text)}`;
     log.appendChild(div);
@@ -607,18 +681,24 @@ class AprsKissPanel extends HTMLElement {
     const t = this._t;
     main.innerHTML = `
       <div class="row"><label><input type="checkbox" class="pause" ${this._paused ? 'checked' : ''}> ${t.pause}</label>
+      <label><input type="checkbox" class="mon-is" ${this._monIs ? 'checked' : ''}> ${t.showIs}</label>
       <button class="btn secondary clear">${t.clear}</button></div>
       <pre class="mon"></pre>`;
     const pre = main.querySelector('.mon');
-    pre.textContent = this._state.monitor.join('\n') + '\n';
+    pre.textContent = this._state.monitor.filter((l) => this._monIs || !isIsLine(l)).join('\n') + '\n';
     pre.scrollTop = pre.scrollHeight;
     main.querySelector('.pause').addEventListener('change', (e) => { this._paused = e.target.checked; if (!this._paused) this._renderMonitor(main); });
+    main.querySelector('.mon-is').addEventListener('change', (e) => {
+      this._monIs = e.target.checked;
+      try { localStorage.setItem('aprs-kiss-mon-is', this._monIs ? '1' : '0'); } catch { /* private mode */ }
+      this._renderMonitor(main);
+    });
     main.querySelector('.clear').addEventListener('click', () => { this._state.monitor = []; this._renderMonitor(main); });
   }
 
   _appendMonitor(line) {
     const pre = this.shadowRoot.querySelector('.mon');
-    if (!pre) return;
+    if (!pre || (!this._monIs && isIsLine(line))) return;
     const atBottom = pre.scrollHeight - pre.scrollTop - pre.clientHeight < 40;
     pre.appendChild(document.createTextNode(line + '\n'));
     if (atBottom) pre.scrollTop = pre.scrollHeight;
@@ -626,41 +706,93 @@ class AprsKissPanel extends HTMLElement {
 
   // ─── APRS ────────────────────────────────────────────────────────────
 
+  // Radio or internet for a message: the last choice, else radio when transmitting is on.
+  _via() {
+    if (!this._viaChoice) {
+      try { this._viaChoice = localStorage.getItem('aprs-kiss-via'); } catch { /* private mode */ }
+    }
+    return this._viaChoice || (this._state?.tx_enabled ? 'radio' : 'internet');
+  }
+
+  _aprsData() {
+    return {
+      msgs: [...this._state.messages].reverse(),
+      heard: [...this._state.heard].sort((a, b) => b.last_heard - a.last_heard),
+    };
+  }
+
+  _aprsMsgsHtml(msgs) {
+    const t = this._t;
+    return msgs.length ? msgs.map((m) => `
+      <div class="msg ${m.direction}">${esc(m.text)}
+        <small>${m.direction === 'in' ? esc(m.from) : '→ ' + esc(m.to)}${m.via === 'radio' ? ' · 📻' : m.via === 'internet' ? ' · 🌐' : ''} · ${time(m.time)}${m.direction === 'out' && m.state ? ' · ' + esc(t.state[m.state] || m.state) : ''}</small></div>`).join('') : `<div class="hint">${t.noMessages}</div>`;
+  }
+
+  _aprsHeardHtml(heard) {
+    const t = this._t;
+    return `<table>
+      <tr><th>Call</th><th>${t.lastHeard}</th><th class="pos">${t.position}</th><th>${t.comment}</th></tr>
+      ${heard.map((h) => `<tr><td>${h.last_rf ? '' : `<span title="${t.viaIs}">🌐 </span>`}${esc(h.call)}</td><td>${time(h.last_heard)}</td>
+        <td class="pos">${h.latitude != null ? `${h.latitude.toFixed(4)}, ${h.longitude.toFixed(4)}` : ''}</td><td>${h.weather ? `<span class="wx">🌡 ${esc(wxText(h.weather))}</span><br>` : ''}${esc(h.comment || h.status || '')}</td></tr>`).join('')}
+    </table>${heard.some((h) => !h.last_rf) ? `<div class="hint">${t.isLegend}</div>` : ''}`;
+  }
+
   _renderAprs(main) {
     const t = this._t;
-    const msgs = [...this._state.messages].reverse();
-    const heard = [...this._state.heard].sort((a, b) => b.last_heard - a.last_heard);
-    main.classList.add('scroll');
+    const { msgs, heard } = this._aprsData();
+    main.classList.add('scroll', 'aprs');
     main.innerHTML = `
       <div class="row msgrow">
         <input class="call to" placeholder="${t.to}" value="${esc(this._msgTo || '')}">
+        <div class="seg" role="group" title="${t.viaTitle}">
+          <button type="button" data-via="radio" class="${this._via() === 'radio' ? 'on' : ''}">📻 ${t.viaRadio}</button><button type="button" data-via="internet" class="${this._via() === 'internet' ? 'on' : ''}">🌐 ${t.viaNet}</button>
+        </div>
         <input class="text" maxlength="67" placeholder="${t.message}">
         <button class="btn sendmsg">${t.send}</button>
       </div>
       <div class="error">${esc(this._error)}</div>
       <div class="card"><h2>${t.map}</h2><div class="map"></div></div>
       <div class="cols">
-        <div class="card msgs"><h2>${t.messages}</h2>${msgs.length ? msgs.map((m) => `
-          <div class="msg ${m.direction}">${esc(m.text)}
-            <small>${m.direction === 'in' ? esc(m.from) : '→ ' + esc(m.to)} · ${time(m.time)}${m.direction === 'out' && m.state ? ' · ' + esc(t.state[m.state] || m.state) : ''}</small></div>`).join('') : `<div class="hint">${t.noMessages}</div>`}
-        </div>
-        <div class="card"><h2>${t.heard}</h2><table>
-          <tr><th>Call</th><th>${t.lastHeard}</th><th class="pos">${t.position}</th><th>${t.comment}</th></tr>
-          ${heard.map((h) => `<tr><td>${esc(h.call)}</td><td>${time(h.last_heard)}</td>
-            <td class="pos">${h.latitude != null ? `${h.latitude.toFixed(4)}, ${h.longitude.toFixed(4)}` : ''}</td><td>${h.weather ? `<span class="wx">🌡 ${esc(wxText(h.weather))}</span><br>` : ''}${esc(h.comment || h.status || '')}</td></tr>`).join('')}
-        </table></div>
+        <div class="card msgs"><h2>${t.messages}</h2><div class="msgs-body">${this._aprsMsgsHtml(msgs)}</div></div>
+        <div class="card"><h2>${t.heard}</h2><div class="heard-body">${this._aprsHeardHtml(heard)}</div></div>
       </div>`;
     const send = async () => {
       const to = main.querySelector('.to').value.trim().toUpperCase();
-      const text = main.querySelector('.text').value.trim();
+      const textEl = main.querySelector('.text');
+      const text = textEl.value.trim();
       if (!to || !text) return;
       this._msgTo = to;
-      if (await this._ws({ type: 'aprs_kiss/send_message', to, text })) await this._loadStatus();
-      this._render();
+      const err = main.querySelector('.error');
+      err.textContent = '';
+      try {
+        await this._hass.callWS({ type: 'aprs_kiss/send_message', to, text, via: this._via(), entry_id: this._state.entry_id });
+        textEl.value = '';
+        await this._loadStatus();
+      } catch (e) {
+        const m = e.message || String(e);
+        err.textContent = /Transmitting is switched off/.test(m) ? t.errTxOff : /APRS-IS is not connected/.test(m) ? t.errIsOff : m;
+      }
     };
+    main.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+      this._viaChoice = b.dataset.via;
+      try { localStorage.setItem('aprs-kiss-via', this._viaChoice); } catch { /* private mode */ }
+      main.querySelectorAll('.seg button').forEach((x) => x.classList.toggle('on', x === b));
+    }));
+    this._map = null;
     this._renderMap(main.querySelector('.map'), heard);
     main.querySelector('.sendmsg').addEventListener('click', send);
     main.querySelector('.text').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+  }
+
+  // New data on the APRS tab: only the lists and the map markers change, so the map
+  // keeps its zoom and position, the lists their scroll, the form what was typed.
+  _updateAprs() {
+    const main = this.shadowRoot.querySelector('main.aprs');
+    if (!main || !this._map) { this._render(); return; }
+    const { msgs, heard } = this._aprsData();
+    main.querySelector('.msgs-body').innerHTML = this._aprsMsgsHtml(msgs);
+    main.querySelector('.heard-body').innerHTML = this._aprsHeardHtml(heard);
+    this._drawMarkers(heard);
   }
 }
 
@@ -679,6 +811,7 @@ AprsKissPanel.prototype._tileToken = async function tileToken() {
 AprsKissPanel.prototype._renderMap = async function renderMap(el, heard) {
   const mod = await import(LEAFLET_JS);
   const L = mod.default ?? mod;  // the ESM build has named exports only
+  if (!el.isConnected) return;
   const map = L.map(el, { zoomControl: true, attributionControl: true });
   const tileUrl = (token) => `/api/map_tiles/raster/{z}/{x}/{y}.png?token=${encodeURIComponent(token)}`;
   const token = await this._tileToken();
@@ -696,23 +829,43 @@ AprsKissPanel.prototype._renderMap = async function renderMap(el, heard) {
     note.onAdd = () => Object.assign(document.createElement('div'), { className: 'hint', textContent: this._t.mapOffline, style: 'background:var(--card-background-color);padding:4px 8px;border-radius:6px' });
     note.addTo(map);
   }
+  this._L = L;
+  this._map = map;
+  this._markers = L.layerGroup().addTo(map);
+  // Once the user zooms or moves the map, that view stays (also after switching tabs).
+  let touched = false;
+  for (const ev of ['pointerdown', 'wheel', 'touchstart']) el.addEventListener(ev, () => { touched = true; }, { passive: true });
+  map.on('moveend', () => { if (touched) this._mapView = { center: map.getCenter(), zoom: map.getZoom() }; });
+  if (this._mapView) map.setView(this._mapView.center, this._mapView.zoom);
+  this._drawMarkers(heard);
+  setTimeout(() => map.invalidateSize(), 100);
+};
+
+AprsKissPanel.prototype._drawMarkers = function drawMarkers(heard) {
+  const L = this._L;
+  const map = this._map;
+  if (!L || !map) return;
+  if (map._popup && map.hasLayer(map._popup)) return;  // don't close a popup being read
+  this._markers.clearLayers();
   const points = [];
   const home = [this._hass.config.latitude, this._hass.config.longitude];
   L.circleMarker(home, { radius: 8, color: '#fff', weight: 2, fillColor: '#1e88e5', fillOpacity: 1 })
-    .bindTooltip(`${esc(this._state.callsign)} (${this._t.you})`, { permanent: true, direction: 'right', className: 'call-label' }).addTo(map);
+    .bindTooltip(`${esc(this._state.callsign)} (${this._t.you})`, { permanent: true, direction: 'right', className: 'call-label' }).addTo(this._markers);
   points.push(home);
   for (const h of heard) {
     if (h.latitude == null || h.longitude == null) continue;
     const p = [h.latitude, h.longitude];
     points.push(p);
-    L.circleMarker(p, { radius: 7, color: '#fff', weight: 2, fillColor: '#fb8c00', fillOpacity: 1 })
-      .bindTooltip(esc(h.call), { permanent: true, direction: 'right', className: 'call-label' })
-      .bindPopup(`<b>${esc(h.call)}</b><br>${time(h.last_heard)}${h.weather ? '<br>🌡 ' + esc(wxText(h.weather)) : ''}${h.comment ? '<br>' + esc(h.comment) : ''}${h.path?.length ? '<br><small>' + esc(h.path.join(',')) + '</small>' : ''}`)
-      .addTo(map);
+    // Orange: heard by the radio; purple: seen only on APRS-IS.
+    const rf = !!h.last_rf;
+    L.circleMarker(p, { radius: rf ? 7 : 6, color: '#fff', weight: 2, fillColor: rf ? '#fb8c00' : '#8e24aa', fillOpacity: rf ? 1 : 0.85 })
+      .bindTooltip(`${rf ? '' : '🌐 '}${esc(h.call)}`, { permanent: true, direction: 'right', className: 'call-label' })
+      .bindPopup(`<b>${esc(h.call)}</b><br>${time(h.last_heard)}${rf ? '' : '<br>🌐 ' + this._t.viaIs}${h.weather ? '<br>🌡 ' + esc(wxText(h.weather)) : ''}${h.comment ? '<br>' + esc(h.comment) : ''}${h.path?.length ? '<br><small>' + esc(h.path.join(',')) + '</small>' : ''}`)
+      .addTo(this._markers);
   }
+  if (this._mapView) return;  // the user's view wins
   if (points.length > 1) map.fitBounds(points, { padding: [30, 30], maxZoom: 12 });
   else map.setView(home, 10);
-  setTimeout(() => map.invalidateSize(), 100);
 };
 
 if (!customElements.get('aprs-kiss-panel')) customElements.define('aprs-kiss-panel', AprsKissPanel);

@@ -24,6 +24,25 @@ KEEPALIVE = 120.0  # seconds without a line from the server before reconnecting 
 NO_GATE = {"TCPIP", "TCPXX", "NOGATE", "RFONLY"}
 
 
+# What the user types to confirm a licence before APRS-IS is switched on (compared
+# without case, accents, extra spaces or a final full stop).
+LICENCE_STATEMENTS = (
+    "mam platnou radioamaterskou licenci",
+    "i hold a valid amateur radio licence",
+    "i hold a valid amateur radio license",
+)
+
+
+def licence_confirmed(text: str | None) -> bool:
+    """True when `text` is the licence statement, in Czech or English."""
+    import unicodedata  # noqa: PLC0415
+
+    plain = unicodedata.normalize("NFKD", text or "")
+    plain = "".join(c for c in plain if not unicodedata.combining(c))
+    plain = " ".join(plain.lower().split()).rstrip(".!").strip()
+    return plain in LICENCE_STATEMENTS
+
+
 def passcode(callsign: str) -> int:
     """The APRS-IS passcode of a callsign (the SSID does not matter)."""
     call = callsign.split("-")[0].upper()

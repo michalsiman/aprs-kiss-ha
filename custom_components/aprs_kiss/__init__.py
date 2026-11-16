@@ -16,7 +16,8 @@ from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, Supp
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
-from .const import DOMAIN, PANEL_STATIC, PANEL_URL
+from .aprsis import licence_confirmed
+from .const import CONF_APRSIS, CONF_LICENCE, DOMAIN, PANEL_STATIC, PANEL_URL
 from .hub import Hub
 from .station import TransmitRefused
 
@@ -76,7 +77,7 @@ def _register_services(hass: HomeAssistant) -> None:
 
     async def send_message(call: ServiceCall) -> ServiceResponse:
         hub = _hub(hass, call.data.get("config_entry_id"))
-        return await _guard(hub.send_aprs_message(call.data["to"], call.data["text"]))
+        return await _guard(hub.send_aprs_message(call.data["to"], call.data["text"], call.data.get("via", "both")))
 
     async def send_position(call: ServiceCall) -> None:
         hub = _hub(hass, call.data.get("config_entry_id"))
@@ -94,7 +95,8 @@ def _register_services(hass: HomeAssistant) -> None:
 
     hass.services.async_register(
         DOMAIN, "send_message", send_message,
-        vol.Schema({**entry_field, vol.Required("to"): cv.string, vol.Required("text"): cv.string}),
+        vol.Schema({**entry_field, vol.Required("to"): cv.string, vol.Required("text"): cv.string,
+                    vol.Optional("via", default="both"): vol.In(["radio", "internet", "both"])}),
         supports_response=SupportsResponse.OPTIONAL,
     )
     hass.services.async_register(
@@ -207,6 +209,7 @@ async def ws_get_settings(hass, connection, msg):
     hub = _hub(hass, msg.get("entry_id"))
     conf = {**hub.entry.data, **hub.entry.options}
     out = {k: conf.get(k) for k in SETTINGS_KEYS}
+    out["aprsis_enabled"] = bool(conf.get(CONF_APRSIS) and conf.get(CONF_LICENCE))
     out["aprsis"] = {
         "connected": bool(hub.aprsis and hub.aprsis.connected),
         "verified": bool(hub.aprsis and hub.aprsis.verified),
@@ -242,6 +245,15 @@ async def ws_set_settings(hass, connection, msg):
             raise ValueError("The symbol is two characters: table and code")
         if new.get("aprsis_passcode") and not str(new["aprsis_passcode"]).lstrip("-").isdigit():
             raise ValueError("The passcode is a number")
+        conf = {**entry.data, **entry.options}
+        was_on = bool(conf.get(CONF_APRSIS) and conf.get(CONF_LICENCE))
+        if new.get(CONF_APRSIS) and not was_on:
+            # Switching APRS-IS on needs the licence statement typed out.
+            if not licence_confirmed(msg["settings"].get("licence_text")):
+                raise ValueError("licence_required")
+            new[CONF_LICENCE] = True
+        elif not new.get(CONF_APRSIS, conf.get(CONF_APRSIS)):
+            new[CONF_LICENCE] = False
     except (ValueError, TypeError) as err:
         connection.send_error(msg["id"], "invalid", str(err))
         return
@@ -255,25 +267,25 @@ async def ws_set_settings(hass, connection, msg):
 
 
 @websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/send_chat", vol.Required("text"): str,
-                                  vol.Optional("destination", default="CQ"): str, vol.Optional("path", default=""): str,
                                   vol.Optional("entry_id"): str})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def ws_send_chat(hass, connection, msg):
     try:
-        await _hub(hass, msg.get("entry_id")).send_chat(msg["text"], msg["destination"], msg["path"])
+        await _hub(hass, msg.get("entry_id")).send_chat(msg["text"])
         connection.send_result(msg["id"], {})
     except (TransmitRefused, ConnectionError, ValueError) as err:
         _error(connection, msg["id"], err)
 
 
 @websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/send_message", vol.Required("to"): str,
-                                  vol.Required("text"): str, vol.Optional("entry_id"): str})
+                                  vol.Required("text"): str, vol.Optional("entry_id"): str,
+                                  vol.Optional("via", default="both"): vol.In(["radio", "internet", "both"])})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def ws_send_message(hass, connection, msg):
     try:
-        result = await _hub(hass, msg.get("entry_id")).send_aprs_message(msg["to"], msg["text"])
+        result = await _hub(hass, msg.get("entry_id")).send_aprs_message(msg["to"], msg["text"], msg["via"])
         connection.send_result(msg["id"], result)
     except (TransmitRefused, ConnectionError, ValueError) as err:
         _error(connection, msg["id"], err)

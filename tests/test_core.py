@@ -196,6 +196,28 @@ class StationTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(sent, ["OK1SIM-7>APZHAK,WIDE1-1,WIDE2-1::OK1ABC   :ack7"])
         await st.close()
 
+    async def test_internet_station_is_marked_until_the_radio_hears_it(self):
+        async def send(raw):
+            pass
+
+        def parse(tnc2):
+            return {"from": tnc2.partition(">")[0], "format": "uncompressed", "latitude": 49.7, "longitude": 13.3}
+
+        st = station.Station(station.StationConfig("OK1SIM-7"), send, parse, lambda p: None,
+                             lambda m: None, lambda: None, lambda: 1)
+        st.handle_is_packet({"from": "OK1XYZ", "format": "uncompressed", "latitude": 49.7, "longitude": 13.3,
+                             "raw": "OK1XYZ>APRS,TCPIP*,qAC,T2:!...", "path": ["TCPIP*", "qAC", "T2"]})
+        self.assertIn("last_is", st.heard["OK1XYZ"])
+        self.assertNotIn("last_rf", st.heard["OK1XYZ"])
+        st.handle_frame(ax25.Frame(ax25.Address.parse("APRS"), ax25.Address.parse("OK1XYZ"),
+                                   [ax25.Address.parse("WIDE1-1")], b"!4942.00N/01318.00E-").encode())
+        self.assertIn("last_rf", st.heard["OK1XYZ"])
+        self.assertEqual(st.heard["OK1XYZ"]["path"], ["WIDE1-1"])
+        # A later internet copy keeps the radio path.
+        st.handle_is_packet({"from": "OK1XYZ", "format": "uncompressed", "raw": "x", "path": ["TCPIP*"]})
+        self.assertEqual(st.heard["OK1XYZ"]["path"], ["WIDE1-1"])
+        await st.close()
+
     async def test_transmit_switched_off(self):
         async def send(raw):
             raise AssertionError("must not send")
@@ -228,6 +250,15 @@ aprsis = _load("aprsis")
 
 
 class AprsIsTest(unittest.TestCase):
+    def test_licence_statement(self):
+        ok = aprsis.licence_confirmed
+        self.assertTrue(ok("mám platnou radioamatérskou licenci"))
+        self.assertTrue(ok("  Mam platnou  radioamaterskou licenci. "))
+        self.assertTrue(ok("I hold a valid amateur radio license"))
+        self.assertFalse(ok("mám licenci"))
+        self.assertFalse(ok(""))
+        self.assertFalse(ok(None))
+
     def test_passcode(self):
         self.assertEqual(aprsis.passcode("N0CALL"), 13023)
         self.assertEqual(aprsis.passcode("n0call-9"), 13023)  # SSID and case do not matter

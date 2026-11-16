@@ -46,6 +46,6 @@ class StationTracker(AprsKissEntity, TrackerEntity):
     @property
     def extra_state_attributes(self):
         e = self._entry
-        out = {k: e[k] for k in ("comment", "speed", "course", "altitude", "last_heard", "path") if k in e}
+        out = {k: e[k] for k in ("comment", "speed", "course", "altitude", "last_heard", "last_rf", "last_is", "path") if k in e}
         out.update({f"wx_{k}": v for k, v in (e.get("weather") or {}).items()})
         return out

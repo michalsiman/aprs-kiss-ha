@@ -44,7 +44,7 @@ SAMPLES = [
     ("OK1XYZ", "APRS", ["WIDE1-1"], "!4935.00N/01245.00E-QTH Stod area"),
     ("OK2DEF-7", "APRS", ["OK0DIG*"], ">Listening on 144.800"),
     ("OK1WX", "APRS", [], "@161200z4936.50N/01310.00E_090/005g010t050r000p000P000h80b10150Weather"),
-    ("OK1XYZ", "CQ", ["WIDE1-1"], "OK1XYZ: Good evening, anyone on packet tonight?"),
+    ("OK1XYZ", "CQ", [], "Good evening, anyone on packet tonight?"),
 ]
 
 
@@ -110,8 +110,8 @@ class FakeTnc:
         if frame.is_ui and frame.destination.call == "CQ" and frame.info:
             text = frame.info.decode("utf-8", "replace")
             await asyncio.sleep(3)
-            reply = f"OK1XYZ: Hi {frame.source}, I copy you 5/9. You wrote: {text.split(': ', 1)[-1][:40]}"
-            await self.send_to_client(ax25.Frame(A("CQ"), A("OK1XYZ"), [A("WIDE1-1")], reply.encode()))
+            reply = f"Hi {frame.source}, I copy you 5/9. You wrote: {text[:40]}"
+            await self.send_to_client(ax25.Frame(A("CQ"), A("OK1XYZ"), [], reply.encode()))
             return
         if frame.is_ui and frame.info.startswith(b":"):
             body = frame.info.decode("latin-1")

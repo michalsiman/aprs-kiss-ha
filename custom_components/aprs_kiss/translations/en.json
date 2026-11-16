@@ -117,6 +117,10 @@
           "name": "Text",
           "description": "Up to 67 characters."
         },
+        "via": {
+          "name": "Via",
+          "description": "Radio only, the internet (APRS-IS) only, or both. Default: both."
+        },
         "config_entry_id": {
           "name": "Station",
           "description": "Only needed with more TNCs."
@@ -179,6 +183,15 @@
           "name": "Station",
           "description": ""
         }
+      }
+    }
+  },
+  "selector": {
+    "via": {
+      "options": {
+        "radio": "Radio",
+        "internet": "Internet (APRS-IS)",
+        "both": "Radio and internet"
       }
     }
   }

@@ -4,8 +4,8 @@ A Home Assistant integration that turns a radio with a **KISS TNC** into an **AP
 
 - **APRS**: receive positions, weather, status and messages; send messages (repeated until acknowledged), your position and status; a map of the stations you hear; incoming messages addressed to you are acknowledged automatically.
 - **Packet radio terminal**: connect to a BBS, node or another station (AX.25 connected mode), type commands and read the answers; send unproto text; accept incoming connections if you want.
-- **Chat**: a plain chat window. Type and press Enter: the text goes out to everyone as `OK1SIM-7: text`, and everything typed by others on the frequency appears below.
-- **Monitor**: every frame heard and sent, in the classic TNC monitor format.
+- **Chat**: a plain chat window. Type and press Enter: the text goes out to everyone on the frequency as it is, and everything typed by others appears below. It is plain packet chat, nothing of APRS.
+- **Monitor**: every frame heard and sent, in the classic TNC monitor format; with APRS-IS on, its packets too, marked `[IS]`.
 - **APRS-IS and iGate**: connect to the APRS internet network; gate what the radio hears to the internet, and internet messages for local stations to the radio; messages to you from the internet arrive in Home Assistant too.
 - Home Assistant **entities, services and events**, so automations can react to APRS messages or send them.
 
@@ -179,7 +179,7 @@ Keep **Transmit off** (the default). In the panel:
 
 - The header shows **TNC connected** once the bridge and the radio are up.
 - **Monitor** lists every frame the radio decodes. On 144.800 MHz you should see APRS traffic within minutes, depending on the area.
-- **APRS** shows the stations heard, their positions on the map and their weather.
+- **APRS** shows the stations heard, their positions on the map and their weather. With APRS-IS on, stations seen only over the internet are there too, marked 🌐 and purple on the map; the *Stations heard* sensor counts only those heard by the radio.
 
 The entity *TNC connected* and the counter *Packets received* show the same in Home Assistant.
 
@@ -195,7 +195,7 @@ Limits: at least 3 seconds between frames and at most 30 frames in 10 minutes (A
 
 ## 8. Packet radio terminal and chat
 
-**Chat** (the first tab) is the simplest way to talk: type a line and press **Enter**. It is sent to everyone as an unproto UI frame to `CQ` (or another destination, optionally via digipeaters), starting with your callsign: `OK1SIM-7: Hello`. Everything others type on the frequency appears below with time and callsign. APRS packets are hidden there by default; *Show APRS packets* shows them too. Only transmitting must be switched on.
+**Chat** (the first tab) is the simplest way to talk: type a line and press **Enter**. It is plain packet chat, nothing of APRS: the text goes out as it is in an unproto UI frame to `CQ`, direct (no digipeaters); your callsign is the frame's sender. Everything others type on the frequency appears below with time and callsign. APRS packets never appear there (packet chat usually runs on another frequency than APRS anyway). Only transmitting must be switched on.
 
 **Connect to a station** (a BBS, a node, another terminal):
 
@@ -232,6 +232,7 @@ action: aprs_kiss.send_message
 data:
   to: OK1ABC-9
   text: The garage door is open
+  via: both                          # radio, internet (APRS-IS) or both (default)
 ---
 action: aprs_kiss.send_position      # Home Assistant's home unless latitude/longitude are given
 data:
@@ -248,7 +249,7 @@ data:
   path: WIDE1-1
 ```
 
-`send_message` returns the message id and state when called with a response variable.
+`send_message` returns the message id and state when called with a response variable. In the panel, the APRS tab has a 📻 Radio / 🌐 Internet switch next to the message; the retries go the same way.
 
 **Events**
 
@@ -288,7 +289,7 @@ actions:
 
 APRS-IS is the internet side of APRS ([aprs-is.net](https://www.aprs-is.net)); [aprs.fi](https://aprs.fi) shows what reaches it. In **Settings → APRS-IS**:
 
-1. **Connect to APRS-IS**: server `euro.aprs2.net` (or `rotate.aprs2.net`, `noam.aprs2.net`, …), port 14580. The **APRS-IS password (passcode)** is computed from your callsign automatically when the field is empty; enter yours if you were given a different one (*Show* reveals what you typed). The status line shows *logged in* and the server once the server has verified the passcode.
+1. **Connect to APRS-IS** is off by default. APRS-IS is for licensed radio amateurs: to switch it on, type the sentence *I hold a valid amateur radio licence* (in Czech *mám platnou radioamatérskou licenci*) in the field that appears, then save. Server `euro.aprs2.net` (or `rotate.aprs2.net`, `noam.aprs2.net`, …), port 14580. The **APRS-IS password (passcode)** is computed from your callsign automatically when the field is empty; enter yours if you were given a different one (*Show* reveals what you typed). The status line shows *logged in* and the server once the server has verified the passcode.
 2. **Receive packets within … km**: a range filter around Home Assistant's home for the internet traffic the integration receives.
 3. **Messages to you from the internet** arrive like radio messages (event `aprs_kiss_message`, sensor *Last message*) and are acknowledged over the internet.
 4. **Your own packets** (position, status, messages) go to APRS-IS as well while connected, also with transmitting off: Home Assistant can then message APRS stations through the internet alone.

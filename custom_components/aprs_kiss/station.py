@@ -49,10 +49,15 @@ class OutgoingMessage:
     tries: int = 0
     state: str = "pending"  # pending, acked, rejected, failed
     acked_at: float | None = None
+    via: str = "both"  # radio, internet or both
 
     def as_dict(self) -> dict[str, Any]:
         return {"id": self.msg_id, "to": self.to, "text": self.text, "state": self.state,
-                "tries": self.tries, "created": self.created, "acked_at": self.acked_at}
+                "tries": self.tries, "created": self.created, "acked_at": self.acked_at, "via": self.via}
+
+
+# Where a message goes: arguments for send_info.
+VIA = {"radio": {"rf": True, "to_is": False}, "internet": {"rf": False, "to_is": True}, "both": {"rf": True, "to_is": True}}
 
 
 class TransmitRefused(Exception):
@@ -133,24 +138,33 @@ class Station:
         self._on_update()
 
     def handle_is_packet(self, packet: dict[str, Any]) -> bool:
-        """A packet from APRS-IS; True when it was a message for us (handled here)."""
+        """A packet from APRS-IS; True when it was a message for us (handled here).
+        Other packets only add the sender to the stations heard, marked as heard over the internet."""
+        now = time.time()
+        packet.setdefault("path", ["TCPIP"])
+        if packet.get("from") and packet.get("format") != "message":
+            self._remember_station(packet, now, via="is")
+            self._on_update()
         if packet.get("format") != "message" or not self._for_me(packet.get("addresse")):
             return False
-        packet.setdefault("path", ["TCPIP"])
-        self._handle_message(packet, time.time(), via_is=True)
+        self._handle_message(packet, now, via_is=True)
         self._on_update()
         return True
 
     def _for_me(self, addressee: str | None) -> bool:
         return bool(addressee) and addressee.strip().upper() == str(self.me)
 
-    def _remember_station(self, packet: dict[str, Any], now: float) -> None:
+    def _remember_station(self, packet: dict[str, Any], now: float, via: str = "rf") -> None:
+        """Note a station; `via` is "rf" (heard by the radio) or "is" (seen on APRS-IS)."""
         call = packet["from"]
         entry = self.heard.pop(call, {"call": call, "count": 0})
         entry["count"] += 1
         entry["last_heard"] = now
-        entry["last_raw"] = packet["raw"]
-        entry["path"] = packet["path"]
+        entry[f"last_{via}"] = now
+        if via == "rf" or "last_rf" not in entry:
+            # The radio path says more about the station than an internet path.
+            entry["last_raw"] = packet["raw"]
+            entry["path"] = packet["path"]
         for k in ("latitude", "longitude", "symbol", "symbol_table", "comment", "speed", "course", "altitude", "status", "weather"):
             if packet.get(k) is not None:
                 entry[k] = packet[k]
@@ -244,13 +258,16 @@ class Station:
         except (TransmitRefused, ConnectionError) as err:
             _LOGGER.debug("Ack to %s not sent: %s", to, err)
 
-    async def send_message(self, to: str, text: str, want_ack: bool = True) -> OutgoingMessage:
-        """Send a message; with an id it is repeated until the recipient acknowledges it."""
+    async def send_message(self, to: str, text: str, want_ack: bool = True, via: str = "both") -> OutgoingMessage:
+        """Send a message; with an id it is repeated until the recipient acknowledges it.
+        `via`: "radio" (RF only), "internet" (APRS-IS only) or "both"."""
+        if via not in VIA:
+            raise ValueError(f"via must be one of {', '.join(VIA)}")
         to = str(Address.parse(to))
         msg_id = aprs.message_id(self._next_msg_number()) if want_ack else ""
-        msg = OutgoingMessage(msg_id or f"noack-{time.time():.0f}", to, aprs.clean_text(text, aprs.MAX_MESSAGE_TEXT), time.time())
+        msg = OutgoingMessage(msg_id or f"noack-{time.time():.0f}", to, aprs.clean_text(text, aprs.MAX_MESSAGE_TEXT), time.time(), via=via)
         info = aprs.message(to, msg.text, msg_id or None)
-        await self.send_info(info)
+        await self.send_info(info, **VIA[via])
         msg.tries = 1
         if want_ack:
             self.outgoing[msg.msg_id] = msg
@@ -268,7 +285,7 @@ class Station:
             if msg.state != "pending":
                 break
             try:
-                await self.send_info(info)
+                await self.send_info(info, **VIA[msg.via])
                 msg.tries += 1
             except (TransmitRefused, ConnectionError) as err:
                 _LOGGER.debug("Retry of message %s not sent: %s", msg.msg_id, err)

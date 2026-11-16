@@ -19,7 +19,7 @@ from .aprsis import AprsIsClient, gate_to_is, passcode, third_party
 from .ax25 import Address, Frame, PF, U_DM
 from .connection import KissConnection, TncSettings
 from .const import (
-    CONF_APRSIS, CONF_APRSIS_HOST, CONF_APRSIS_PASSCODE, CONF_APRSIS_PORT, CONF_APRSIS_RADIUS,
+    CONF_APRSIS, CONF_LICENCE, CONF_APRSIS_HOST, CONF_APRSIS_PASSCODE, CONF_APRSIS_PORT, CONF_APRSIS_RADIUS,
     CONF_BEACON_MINUTES, CONF_IGATE_RX, CONF_IGATE_TX, DEFAULT_APRSIS_HOST, DEFAULT_APRSIS_PORT,
     DEFAULT_APRSIS_RADIUS, VERSION,
     CONF_ACCEPT_INCOMING, CONF_BAUDRATE, CONF_CALLSIGN, CONF_COMMENT, CONF_CONNECTION, CONF_DEVICE,
@@ -87,7 +87,7 @@ class Hub:
         self.igate_tx = bool(conf.get(CONF_IGATE_TX, False))
         self.igate_stats = {"rf_to_is": 0, "is_to_rf": 0, "is_messages": 0}
         self.aprsis: AprsIsClient | None = None
-        if conf.get(CONF_APRSIS):
+        if conf.get(CONF_APRSIS) and conf.get(CONF_LICENCE):
             lat, lon = hass.config.latitude, hass.config.longitude
             radius = int(conf.get(CONF_APRSIS_RADIUS, DEFAULT_APRSIS_RADIUS) or 0)
             code = conf.get(CONF_APRSIS_PASSCODE) or passcode(str(self.me))
@@ -205,6 +205,7 @@ class Hub:
 
     async def _gate_up(self, line: str) -> None:
         if self.aprsis and await self.aprsis.send(line):
+            self._monitor(f"[IS] {line}", outgoing=True)
             self.igate_stats["rf_to_is"] += 1
             self._on_update()
 
@@ -213,7 +214,11 @@ class Hub:
     async def _send_own_to_is(self, info: str) -> bool:
         if not self.aprsis or not self.aprsis.verified:
             return False
-        return await self.aprsis.send(f"{self.me}>{aprs_build.TOCALL},TCPIP*:{info}")
+        line = f"{self.me}>{aprs_build.TOCALL},TCPIP*:{info}"
+        sent = await self.aprsis.send(line)
+        if sent:
+            self._monitor(f"[IS] {line}", outgoing=True)
+        return sent
 
     @callback
     def _on_is_state(self, connected: bool) -> None:
@@ -221,8 +226,11 @@ class Hub:
 
     @callback
     def _on_is_line(self, line: str) -> None:
+        self._monitor(f"[IS] {line}")
         packet = parse(line)
         packet["raw"] = line
+        head = line.partition(":")[0]
+        packet["path"] = head.split(",")[1:] or ["TCPIP"]
         src = packet.get("from", "")
         if self.station.handle_is_packet(packet):
             self.igate_stats["is_messages"] += 1
@@ -232,10 +240,10 @@ class Hub:
         to = (packet.get("addresse") or "").strip().upper()
         local = self.station.heard.get(to)
         now = time.time()
-        if not local or now - local.get("last_heard", 0) > LOCAL_SECONDS or "TCPIP" in "".join(local.get("path", [])):
+        if not local or now - local.get("last_rf", 0) > LOCAL_SECONDS:  # heard by the radio lately
             return
         src_local = self.station.heard.get(src.upper())
-        if src_local and now - src_local.get("last_heard", 0) < LOCAL_SECONDS:
+        if src_local and now - src_local.get("last_rf", 0) < LOCAL_SECONDS:
             return  # the sender is on RF itself
         head, _, info = line.partition(":")
         dst = head.split(">", 1)[1].split(",", 1)[0] if ">" in head else "APRS"
@@ -274,10 +282,10 @@ class Hub:
 
     # ─── APRS messages ────────────────────────────────────────────────────
 
-    async def send_aprs_message(self, to: str, text: str) -> dict[str, Any]:
-        msg = await self.station.send_message(to, text)
+    async def send_aprs_message(self, to: str, text: str, via: str = "both") -> dict[str, Any]:
+        msg = await self.station.send_message(to, text, via=via)
         item = {"direction": "out", "from": str(self.me), "to": msg.to, "text": msg.text, "time": msg.created,
-                "msg_no": msg.msg_id}
+                "msg_no": msg.msg_id, "via": via}
         self.messages.append(item)
         self._schedule_save()
         self.hass.bus.async_fire(EVENT_TERMINAL, {"entry_id": self.entry.entry_id, "kind": "aprs_message", "message": item})
@@ -343,7 +351,8 @@ class Hub:
         return frame.destination.call.startswith("AP") or (bool(info) and chr(info[0]) in APRS_TYPES)
 
     def _chat_frame(self, frame: Frame) -> None:
-        if not frame.info or frame.source == self.me:
+        # Packet chat only: APRS packets never show up in the chat.
+        if not frame.info or frame.source == self.me or self.is_aprs(frame):
             return
         now = time.time()
         key = f"{frame.source}|{frame.info!r}"
@@ -357,20 +366,21 @@ class Hub:
         if text.upper().startswith(prefix.upper()):
             text = text[len(prefix):]
         self._chat_add({"time": now, "from": str(frame.source), "to": str(frame.destination),
-                        "text": text, "aprs": self.is_aprs(frame), "out": False})
+                        "text": text, "out": False})
 
     def _chat_add(self, entry: dict[str, Any]) -> None:
         self.chat.append(entry)
         self.hass.bus.async_fire(EVENT_TERMINAL, {"entry_id": self.entry.entry_id, "kind": "chat", "entry": entry})
 
-    async def send_chat(self, text: str, destination: str = "CQ", path: str = "") -> None:
-        """Plain text to everyone: '<our call>: text' in a UI frame."""
+    async def send_chat(self, text: str) -> None:
+        """Packet chat: just the text in a UI frame to CQ, direct (no digipeaters, nothing of APRS).
+        Our callsign is the frame's source, so the text carries nothing else."""
         text = text.strip()
         if not text:
             return
-        await self.send_unproto(destination or "CQ", f"{self.me}: {text}", path)
-        self._chat_add({"time": time.time(), "from": str(self.me), "to": (destination or "CQ").upper(),
-                        "text": text, "aprs": False, "out": True})
+        await self.send_unproto("CQ", text)
+        self._chat_add({"time": time.time(), "from": str(self.me), "to": "CQ",
+                        "text": text, "out": True})
 
     async def send_unproto(self, destination: str, text: str, path: str = "") -> None:
         """A UI frame with plain text (classic unproto, e.g. to CQ or ID)."""

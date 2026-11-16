@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.2] - 2026-11-16
+
+- Chat is plain packet chat, nothing of APRS: no *To* and *via* fields, the text goes out as it is (no `CALL:` prefix, your callsign is the frame's sender) in a UI frame to `CQ`, direct, without digipeaters. APRS packets never appear in the chat, so the *Show APRS packets* switch is gone.
+- APRS-IS is off by default, and switching it on asks you to type *I hold a valid amateur radio licence* (*mám platnou radioamatérskou licenci*); the integration checks it too. An installation that had APRS-IS on without this statement starts with it off.
+- APRS tab on a phone: the message form and the map stay in place under the header; only the messages and stations heard scroll below them.
+- APRS-IS packets show in the Monitor, marked `[IS]` (received and sent), and their stations on the map and in *Stations heard*, marked 🌐 and purple until the radio hears them itself. The *Stations heard* sensor still counts only stations heard by the radio, and the iGate decides who is local by the radio alone. Tracked callsigns also follow positions from APRS-IS.
+- APRS tab: new packets only refresh the lists and the map markers. The map keeps the zoom and position you chose (also after switching tabs), the lists keep their scroll, and a message being typed is not lost.
+- Monitor: a *From the internet (APRS-IS)* switch shows or hides the `[IS]` lines (remembered in the browser).
+- APRS messages: choose 📻 Radio or 🌐 Internet (APRS-IS) next to the message in the panel (remembered; radio by default while transmitting is on); retries go the same way. The `send_message` service has a `via` option: `radio`, `internet` or `both` (default, as before).
+- Settings: as soon as something changes, *Changes are not saved yet: press Save* appears and the Save button is highlighted, so a change (such as switching APRS-IS off) isn't left unsaved by mistake.
+- After an update a banner at the top says a new version is installed, with a *Reload page* button (as in MeshCore Chattx): no need to close the Home Assistant app. It is checked when Home Assistant reconnects after its restart and when the app comes back to the foreground.
+- The panel keeps receiving live updates after you open another page of Home Assistant and come back.
+
 ## [0.3.1] - 2026-11-16
 
 - Settings: a clear *APRS-IS password (passcode)* field with Show/Hide; empty means computed from the callsign.

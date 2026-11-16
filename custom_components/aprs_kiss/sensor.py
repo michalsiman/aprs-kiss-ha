@@ -59,7 +59,7 @@ class StationsHeard(AprsKissEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return len(self.hub.station.heard)
+        return sum(1 for e in self.hub.station.heard.values() if "last_rf" in e)  # by the radio
 
 
 class Counter(AprsKissEntity, SensorEntity):

@@ -22,6 +22,7 @@ CONF_APRSIS_PASSCODE = "aprsis_passcode"
 CONF_APRSIS_RADIUS = "aprsis_radius_km"
 CONF_IGATE_RX = "igate_rx"      # RF → APRS-IS
 CONF_IGATE_TX = "igate_tx"      # APRS-IS → RF (messages to local stations)
+CONF_LICENCE = "licence_confirmed"  # the user typed the licence statement when enabling APRS-IS
 
 DEFAULT_PORT = 8001
 DEFAULT_PATH = "WIDE1-1,WIDE2-1"
@@ -29,7 +30,7 @@ DEFAULT_SYMBOL = "/-"
 DEFAULT_APRSIS_HOST = "euro.aprs2.net"
 DEFAULT_APRSIS_PORT = 14580
 DEFAULT_APRSIS_RADIUS = 50
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 
 EVENT_PACKET = f"{DOMAIN}_packet"      # every decoded APRS packet
 EVENT_MESSAGE = f"{DOMAIN}_message"    # an APRS message addressed to us

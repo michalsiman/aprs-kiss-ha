@@ -10,6 +10,15 @@ send_message:
       example: Hello from Home Assistant
       selector:
         text:
+    via:
+      default: both
+      selector:
+        select:
+          translation_key: via
+          options:
+            - radio
+            - internet
+            - both
     config_entry_id:
       selector:
         config_entry:
