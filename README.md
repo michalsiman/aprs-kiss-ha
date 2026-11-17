@@ -20,23 +20,23 @@ It was built and tested for a **Quansheng UV-K1 / UV-K5 V3** running the **F4HWN
 
 <table>
 <tr>
-<td width="50%"><picture><source media="(prefers-color-scheme: light)" srcset="assets/chat-light.png"><img src="assets/chat.png" alt="Chat window"></picture></td>
-<td width="50%"><picture><source media="(prefers-color-scheme: light)" srcset="assets/terminal-light.png"><img src="assets/terminal.png" alt="Packet radio terminal connected to a BBS"></picture></td>
+<td width="50%"><a href="assets/chat.png"><picture><source media="(prefers-color-scheme: light)" srcset="assets/chat-light.png"><img src="assets/chat.png" alt="Chat window"></picture></a></td>
+<td width="50%"><a href="assets/terminal.png"><picture><source media="(prefers-color-scheme: light)" srcset="assets/terminal-light.png"><img src="assets/terminal.png" alt="Packet radio terminal connected to a BBS"></picture></a></td>
 </tr>
 <tr>
 <td><b>Chat</b>: type and press Enter; everyone's text on the frequency below.</td>
 <td><b>Terminal</b>: connected to a BBS, commands and answers.</td>
 </tr>
 <tr>
-<td><picture><source media="(prefers-color-scheme: light)" srcset="assets/aprs-light.png"><img src="assets/aprs.png" alt="APRS map, messages and stations heard with weather"></picture></td>
-<td><picture><source media="(prefers-color-scheme: light)" srcset="assets/monitor-light.png"><img src="assets/monitor.png" alt="Frame monitor"></picture></td>
+<td><a href="assets/aprs.png"><picture><source media="(prefers-color-scheme: light)" srcset="assets/aprs-light.png"><img src="assets/aprs.png" alt="APRS map, messages and stations heard with weather"></picture></a></td>
+<td><a href="assets/monitor.png"><picture><source media="(prefers-color-scheme: light)" srcset="assets/monitor-light.png"><img src="assets/monitor.png" alt="Frame monitor"></picture></a></td>
 </tr>
 <tr>
 <td><b>APRS</b>: map of the stations heard, messages with their acknowledgement, weather.</td>
 <td><b>Monitor</b>: every frame, received (&lt;&lt;) and sent (&gt;&gt;), with AX.25 control fields.</td>
 </tr>
 <tr>
-<td colspan="2"><picture><source media="(prefers-color-scheme: light)" srcset="assets/settings-light.png"><img src="assets/settings.png" alt="Settings: station, icon, APRS-IS and iGate"></picture></td>
+<td colspan="2"><a href="assets/settings.png"><picture><source media="(prefers-color-scheme: light)" srcset="assets/settings-light.png"><img src="assets/settings.png" alt="Settings: station, icon, APRS-IS and iGate"></picture></a></td>
 </tr>
 <tr>
 <td colspan="2"><b>Settings</b>: callsign and SSID with their usual meaning, the APRS icon from the common symbols, beacon, tracked stations, APRS-IS (with its password) and iGate.</td>
@@ -47,13 +47,13 @@ On a phone (the Home Assistant app or a mobile browser) the panel fits the scree
 
 <table>
 <tr>
-<td width="25%"><picture><source media="(prefers-color-scheme: light)" srcset="assets/phone-chat-light.png"><img src="assets/phone-chat.png" alt="Chat on a phone"></picture></td>
-<td width="25%"><picture><source media="(prefers-color-scheme: light)" srcset="assets/phone-aprs-light.png"><img src="assets/phone-aprs.png" alt="APRS map on a phone"></picture></td>
+<td width="25%"><a href="assets/phone-chat.png"><picture><source media="(prefers-color-scheme: light)" srcset="assets/phone-chat-light.png"><img src="assets/phone-chat.png" alt="Chat on a phone"></picture></a></td>
+<td width="25%"><a href="assets/phone-aprs.png"><picture><source media="(prefers-color-scheme: light)" srcset="assets/phone-aprs-light.png"><img src="assets/phone-aprs.png" alt="APRS map on a phone"></picture></a></td>
 <td width="50%"></td>
 </tr>
 </table>
 
-*The panel follows Home Assistant's theme, light or dark; the screenshots follow your GitHub theme. They were taken with the built-in simulator (see [Testing without a radio](#testing-without-a-radio)); the stations are made up.*
+*Click a screenshot to see it full size. The panel follows Home Assistant's theme, light or dark; the screenshots follow your GitHub theme. They were taken with the built-in simulator (see [Testing without a radio](#testing-without-a-radio)); the stations are made up.*
 
 ## Contents
 
