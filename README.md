@@ -13,6 +13,9 @@ A Home Assistant integration that turns a radio with a **KISS TNC** into an **AP
 
 *The button adds this repository to your Home Assistant's **Marketplace** (HACS on versions before 2026.11); see [Install the integration](#4-install-the-integration).*
 
+> [!TIP]
+> If the button opens a wrong address (such as `homeassistant.local:8123` when your Home Assistant runs elsewhere), set your Home Assistant's address once at [my.home-assistant.io](https://my.home-assistant.io/) and click the button again.
+
 It was built and tested for a **Quansheng UV-K1 / UV-K5 V3** running the **F4HWN** firmware with its **KISS TNC** app, connected by USB-C. Any KISS TNC works: Direwolf, a hardware TNC, a Mobilinkd, a NinoTNC, … over TCP or a serial port.
 
 > [!WARNING]
@@ -152,6 +155,9 @@ If the radio is plugged into the machine that runs Home Assistant (Home Assistan
 Home Assistant 2026.11 and newer has the community store built in as the **Marketplace** (Settings → Marketplace); older versions use HACS, which works the same way. The integration is not in the default list yet, so it is added as a *custom repository*:
 
 [![Open aprs-kiss-ha in the Home Assistant Marketplace](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=michalsiman&repository=aprs-kiss-ha&category=integration)
+
+> [!TIP]
+> If the button opens a wrong address (such as `homeassistant.local:8123` when your Home Assistant runs elsewhere), set your Home Assistant's address once at [my.home-assistant.io](https://my.home-assistant.io/) and click the button again.
 
 1. Click the button above. It opens your Home Assistant (through my.home-assistant.io, which asks for your Home Assistant's address the first time) with this repository ready to add; confirm with **Add**.
    Without the button: Settings → **Marketplace**, open its menu (⋮) → **Custom repositories**, enter `https://github.com/michalsiman/aprs-kiss-ha` with the type **Integration** and add it.
