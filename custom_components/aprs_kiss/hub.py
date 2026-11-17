@@ -20,7 +20,7 @@ from .ax25 import Address, Frame, PF, U_DM
 from .connection import KissConnection, TncSettings
 from .const import (
     CONF_APRSIS, CONF_LICENCE, CONF_APRSIS_HOST, CONF_APRSIS_PASSCODE, CONF_APRSIS_PORT, CONF_APRSIS_RADIUS,
-    CONF_BEACON_MINUTES, CONF_IGATE_RX, CONF_IGATE_TX, DEFAULT_APRSIS_HOST, DEFAULT_APRSIS_PORT,
+    CONF_BEACON_IS, CONF_BEACON_MINUTES, CONF_IGATE_RX, CONF_IGATE_TX, DEFAULT_APRSIS_HOST, DEFAULT_APRSIS_PORT,
     DEFAULT_APRSIS_RADIUS, VERSION,
     CONF_ACCEPT_INCOMING, CONF_BAUDRATE, CONF_CALLSIGN, CONF_COMMENT, CONF_CONNECTION, CONF_DEVICE,
     CONF_HOST, CONF_PATH, CONF_PORT, CONF_SYMBOL, CONF_TXDELAY, DEFAULT_PATH, DEFAULT_PORT,
@@ -261,7 +261,9 @@ class Hub:
 
     async def _beacon(self, _now=None) -> None:
         try:
-            await self.station.send_position(self.hass.config.latitude, self.hass.config.longitude)
+            # By radio while transmitting is on; over the internet only when chosen in Settings.
+            await self.station.send_position(self.hass.config.latitude, self.hass.config.longitude,
+                                             to_is=bool(self.conf.get(CONF_BEACON_IS)))
         except (TransmitRefused, ConnectionError) as err:
             _LOGGER.debug("Beacon not sent: %s", err)
 

@@ -196,7 +196,7 @@ async def ws_send_unproto(hass, connection, msg):
 
 SETTINGS_KEYS = {
     "callsign": str, "path": str, "symbol": str, "comment": str, "beacon_minutes": int,
-    "tracked_callsigns": str, "accept_incoming": bool, "txdelay_ms": int,
+    "beacon_is": bool, "tracked_callsigns": str, "accept_incoming": bool, "txdelay_ms": int,
     "aprsis_enabled": bool, "aprsis_host": str, "aprsis_port": int, "aprsis_passcode": str,
     "aprsis_radius_km": int, "igate_rx": bool, "igate_tx": bool,
 }

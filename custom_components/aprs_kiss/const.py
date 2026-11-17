@@ -12,6 +12,7 @@ CONF_PATH = "path"
 CONF_SYMBOL = "symbol"
 CONF_COMMENT = "comment"
 CONF_BEACON_MINUTES = "beacon_minutes"
+CONF_BEACON_IS = "beacon_is"  # the regular position also goes to APRS-IS
 CONF_TRACKED = "tracked_callsigns"
 CONF_ACCEPT_INCOMING = "accept_incoming"
 CONF_TXDELAY = "txdelay_ms"
@@ -30,7 +31,7 @@ DEFAULT_SYMBOL = "/-"
 DEFAULT_APRSIS_HOST = "euro.aprs2.net"
 DEFAULT_APRSIS_PORT = 14580
 DEFAULT_APRSIS_RADIUS = 50
-VERSION = "0.3.3"
+VERSION = "0.3.4"
 
 EVENT_PACKET = f"{DOMAIN}_packet"      # every decoded APRS packet
 EVENT_MESSAGE = f"{DOMAIN}_message"    # an APRS message addressed to us

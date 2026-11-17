@@ -9,6 +9,10 @@ A Home Assistant integration that turns a radio with a **KISS TNC** into an **AP
 - **APRS-IS and iGate**: connect to the APRS internet network; gate what the radio hears to the internet, and internet messages for local stations to the radio; messages to you from the internet arrive in Home Assistant too.
 - Home Assistant **entities, services and events**, so automations can react to APRS messages or send them.
 
+[![Open aprs-kiss-ha in the Home Assistant Marketplace](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=michalsiman&repository=aprs-kiss-ha&category=integration)
+
+*The button adds this repository to your Home Assistant's **Marketplace** (HACS on versions before 2026.11); see [Install the integration](#4-install-the-integration).*
+
 It was built and tested for a **Quansheng UV-K1 / UV-K5 V3** running the **F4HWN** firmware with its **KISS TNC** app, connected by USB-C. Any KISS TNC works: Direwolf, a hardware TNC, a Mobilinkd, a NinoTNC, … over TCP or a serial port.
 
 > [!WARNING]
@@ -143,11 +147,19 @@ If the radio is plugged into the machine that runs Home Assistant (Home Assistan
 
 ## 4. Install the integration
 
-**With HACS / the Marketplace (recommended)**
+**From the Marketplace (recommended)**
 
-1. HACS → ⋮ → *Custom repositories* → add `https://github.com/michalsiman/aprs-kiss-ha`, type *Integration*.
-2. Install **APRS & Packet (KISS TNC)**.
-3. Restart Home Assistant.
+Home Assistant 2026.11 and newer has the community store built in as the **Marketplace** (Settings → Marketplace); older versions use HACS, which works the same way. The integration is not in the default list yet, so it is added as a *custom repository*:
+
+[![Open aprs-kiss-ha in the Home Assistant Marketplace](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=michalsiman&repository=aprs-kiss-ha&category=integration)
+
+1. Click the button above. It opens your Home Assistant (through my.home-assistant.io, which asks for your Home Assistant's address the first time) with this repository ready to add; confirm with **Add**.
+   Without the button: Settings → **Marketplace**, open its menu (⋮) → **Custom repositories**, enter `https://github.com/michalsiman/aprs-kiss-ha` with the type **Integration** and add it.
+2. Open **APRS & Packet (KISS TNC)** in the Marketplace and **Download** it.
+3. Restart Home Assistant (Settings → System → ⋮ → Restart).
+4. Continue with [Set it up](#5-set-it-up).
+
+New versions are offered in the Marketplace and under Settings → Updates; after updating, restart Home Assistant. If the panel is open in a browser or the app, a banner offers to reload it.
 
 **By hand**
 
@@ -169,7 +181,7 @@ Settings → Devices & services → **Add integration** → **APRS & Packet (KIS
    - *Position comment*: sent with your position.
    - *Accept incoming packet connections*: lets other stations connect to you (only while transmitting is on).
 
-Everything can be changed later in the panel's **Settings** tab: callsign and SSID (the list shows the usual meaning of each SSID: -7 handheld, -9 car, -10 iGate, …), the **icon** from the most common APRS symbols, comment, path, a **regular position beacon**, callsigns to track on the map, incoming connections, TX delay, and **APRS-IS / iGate**. Saving restarts the integration with the new settings. (The integration's *Configure* button offers the station options too.)
+Everything can be changed later in the panel's **Settings** tab: callsign and SSID (the list shows the usual meaning of each SSID: -7 handheld, -9 car, -10 iGate, …), the **icon** from the most common APRS symbols, comment, path, a **regular position beacon** (by radio while Transmit is on, and over the internet too only when *Send it regularly over the internet too* is ticked), callsigns to track on the map, incoming connections, TX delay, and **APRS-IS / iGate**. Saving restarts the integration with the new settings. (The integration's *Configure* button offers the station options too.)
 
 A new sidebar item **APRS & Packet** opens the panel (administrators only).
 

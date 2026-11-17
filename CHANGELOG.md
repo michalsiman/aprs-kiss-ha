@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.4] - 2026-11-17
+
+- Settings: the licence sentence field showed even with APRS-IS already on; it appears again only while switching APRS-IS on.
+- README: installing from the Home Assistant Marketplace, with a button that adds the repository in one click.
+- New Settings screenshots.
+- Settings: *Send it regularly over the internet too (APRS-IS)* under the position interval. The regular position goes by radio while Transmit is on, and to APRS-IS only with this box ticked (before, it always went to APRS-IS when connected). Off by default. The *Send position* button still goes both ways.
+
 ## [0.3.3] - 2026-11-16
 
 - Stations from APRS-IS: when several iGates send the same packet within a minute, the first copy is kept (later copies often carry an iGate's own additions, such as LoRa signal reports that break the weather data); packets received with bit errors no longer overwrite a station's comment, weather or position.
