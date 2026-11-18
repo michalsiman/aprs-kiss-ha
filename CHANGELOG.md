@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+- Settings: new *TNC connection* card at the top: network (address and port) or USB / serial port, picked from the ports found on the Home Assistant machine (Search again; *Other* to type a path) with the speed. Saving restarts the integration with the new connection. The card also shows whether the TNC is connected and the last error.
+- The setup step for a serial TNC lists the ports found (the stable /dev/serial/by-id/… name first) instead of a bare text field, and the speed defaults to 115200.
+- *Reconfigure* in Settings → Devices & services changes where the TNC is (network or USB / serial) without removing the integration.
+
 ## [0.3.4] - 2026-11-17
 
 - Settings: the licence sentence field showed even with APRS-IS already on; it appears again only while switching APRS-IS on.

@@ -5,7 +5,7 @@
         "title": "Kde je KISS TNC?",
         "menu_options": {
           "tcp": "V síti (KISS přes TCP)",
-          "serial": "Na sériovém portu tohoto počítače"
+          "serial": "USB nebo sériový port tohoto počítače"
         }
       },
       "tcp": {
@@ -17,10 +17,15 @@
         }
       },
       "serial": {
-        "title": "Sériový port",
+        "title": "USB nebo sériový port",
+        "description": "Vyber port, ke kterému je rádio připojené kabelem. Když ho v seznamu nevidíš, připoj rádio a otevři tenhle krok znovu, nebo cestu napiš.",
         "data": {
-          "device": "Zařízení, např. /dev/serial/by-id/…",
+          "device": "Port",
           "baudrate": "Rychlost (baud)"
+        },
+        "data_description": {
+          "device": "Nejlepší je název /dev/serial/by-id/…: zůstane stejný i po odpojení a připojení.",
+          "baudrate": "Rádia s USB (třeba Quansheng s KISS TNC) rychlost nepoužívají, nech 115200."
         }
       },
       "station": {
@@ -37,15 +42,45 @@
           "path": "Pro APRS se běžně používá WIDE1-1,WIDE2-1; prázdné jen přímo.",
           "symbol": "/- dům, /> auto, /[ osoba, /k nákladní auto."
         }
+      },
+      "reconfigure": {
+        "title": "Kde je KISS TNC?",
+        "menu_options": {
+          "reconfigure_tcp": "V síti (KISS přes TCP)",
+          "reconfigure_serial": "USB nebo sériový port tohoto počítače"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "KISS TCP",
+        "description": "Adresa a port KISS TCP serveru, třeba mostu na počítači, ke kterému je rádio připojené, Direwolfu nebo TNC se sítí. Připojení se zkouší pořád znovu, takže rádio můžeš zapnout i později.",
+        "data": {
+          "host": "Adresa",
+          "port": "Port"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "USB nebo sériový port",
+        "description": "Vyber port, ke kterému je rádio připojené kabelem. Když ho v seznamu nevidíš, připoj rádio a otevři tenhle krok znovu, nebo cestu napiš.",
+        "data": {
+          "device": "Port",
+          "baudrate": "Rychlost (baud)"
+        },
+        "data_description": {
+          "device": "Nejlepší je název /dev/serial/by-id/…: zůstane stejný i po odpojení a připojení.",
+          "baudrate": "Rádia s USB (třeba Quansheng s KISS TNC) rychlost nepoužívají, nech 115200."
+        }
       }
     },
     "error": {
       "invalid_callsign": "Není to značka (až 6 písmen a číslic, SSID 0–15).",
       "invalid_path": "Položka cesty není značka.",
-      "invalid_symbol": "Dva znaky: tabulka (/ nebo \\) a kód symbolu."
+      "invalid_symbol": "Dva znaky: tabulka (/ nebo \\) a kód symbolu.",
+      "invalid_device": "Zadej cestu k portu, začíná /dev/.",
+      "invalid_baudrate": "Rychlost je 1200–1000000."
     },
     "abort": {
-      "already_configured": "Tahle značka už je nastavená."
+      "already_configured": "Tahle značka už je nastavená.",
+      "reconfigure_successful": "Připojení k TNC je změněné."
     }
   },
   "options": {

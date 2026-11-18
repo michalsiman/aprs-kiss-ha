@@ -146,7 +146,9 @@ journalctl -u kiss-tcp-bridge -f                   # watch it
 
 ### 3.4 Without a bridge: radio plugged into Home Assistant
 
-If the radio is plugged into the machine that runs Home Assistant (Home Assistant OS on a Raspberry Pi or a mini PC, or a VM with USB passthrough), choose **serial port** in the setup and give the `/dev/serial/by-id/…` path. The bridge is not needed. USB resets are handled the same way (the integration reconnects).
+If the radio is plugged into the machine that runs Home Assistant (Home Assistant OS on a Raspberry Pi or a mini PC, or a VM with USB passthrough), choose **USB or serial port** in the setup and pick the radio from the list of ports found (the stable `/dev/serial/by-id/…` name is used; *Other* lets you type a path). The bridge is not needed. USB resets are handled the same way (the integration reconnects).
+
+The connection can be changed later without removing the integration: in the panel's Settings (*TNC connection*, with **Search again** after plugging the radio in) or with **Reconfigure** in Settings → Devices & services.
 
 ## 4. Install the integration
 

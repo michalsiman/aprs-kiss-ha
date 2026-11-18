@@ -117,7 +117,7 @@ def _register_services(hass: HomeAssistant) -> None:
 
 def _register_ws(hass: HomeAssistant) -> None:
     for handler in (ws_state, ws_connect, ws_disconnect, ws_send_text, ws_send_unproto, ws_send_message, ws_set_tx,
-                    ws_send_chat, ws_get_settings, ws_set_settings):
+                    ws_send_chat, ws_get_settings, ws_set_settings, ws_serial_ports):
         websocket_api.async_register_command(hass, handler)
 
 
@@ -194,6 +194,19 @@ async def ws_send_unproto(hass, connection, msg):
         _error(connection, msg["id"], err)
 
 
+# Where the TNC is. Kept in the entry's data, as the setup put it there.
+CONNECTION_KEYS = {"connection": str, "host": str, "port": int, "device": str, "baudrate": int}
+
+
+@websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/serial_ports"})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_serial_ports(hass, connection, msg):
+    from .ports import list_serial_ports  # noqa: PLC0415
+
+    connection.send_result(msg["id"], {"ports": await hass.async_add_executor_job(list_serial_ports)})
+
+
 SETTINGS_KEYS = {
     "callsign": str, "path": str, "symbol": str, "comment": str, "beacon_minutes": int,
     "beacon_is": bool, "tracked_callsigns": str, "accept_incoming": bool, "txdelay_ms": int,
@@ -217,6 +230,9 @@ async def ws_get_settings(hass, connection, msg):
         "error": hub.aprsis.last_error if hub.aprsis else None,
     } if hub.aprsis else None
     out["igate_stats"] = hub.igate_stats
+    out.update({k: conf.get(k) for k in CONNECTION_KEYS})
+    out["connection"] = conf.get("connection") or "tcp"
+    out["tnc"] = {"connected": hub.connection.connected, "error": hub.connection.last_error}
     connection.send_result(msg["id"], out)
 
 
@@ -245,6 +261,9 @@ async def ws_set_settings(hass, connection, msg):
             raise ValueError("The symbol is two characters: table and code")
         if new.get("aprsis_passcode") and not str(new["aprsis_passcode"]).lstrip("-").isdigit():
             raise ValueError("The passcode is a number")
+        from .ports import connection_update  # noqa: PLC0415
+
+        tnc = connection_update(msg["settings"])
         conf = {**entry.data, **entry.options}
         was_on = bool(conf.get(CONF_APRSIS) and conf.get(CONF_LICENCE))
         if new.get(CONF_APRSIS) and not was_on:
@@ -259,6 +278,8 @@ async def ws_set_settings(hass, connection, msg):
         return
     options = {**entry.options, **new}
     update: dict[str, Any] = {"options": options}
+    if tnc:
+        update["data"] = {**entry.data, **tnc}
     if new.get("callsign") and new["callsign"] != entry.title:
         update["title"] = new["callsign"]
         update["unique_id"] = new["callsign"]

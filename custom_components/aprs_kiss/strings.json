@@ -5,7 +5,7 @@
         "title": "Where is the KISS TNC?",
         "menu_options": {
           "tcp": "On the network (KISS over TCP)",
-          "serial": "On a serial port of this machine"
+          "serial": "USB or serial port of this computer"
         }
       },
       "tcp": {
@@ -17,10 +17,15 @@
         }
       },
       "serial": {
-        "title": "Serial port",
+        "title": "USB or serial port",
+        "description": "Pick the port the radio is plugged into. If it is not listed, plug the radio in and open this step again, or type the path.",
         "data": {
-          "device": "Device, e.g. /dev/serial/by-id/…",
+          "device": "Port",
           "baudrate": "Speed (baud)"
+        },
+        "data_description": {
+          "device": "Best is the /dev/serial/by-id/… name: it stays the same when the radio is plugged in again.",
+          "baudrate": "USB radios (such as a Quansheng with the KISS TNC) ignore the speed; leave 115200."
         }
       },
       "station": {
@@ -37,15 +42,45 @@
           "path": "WIDE1-1,WIDE2-1 is usual for APRS; empty for direct only.",
           "symbol": "/- house, /> car, /[ person, /k truck."
         }
+      },
+      "reconfigure": {
+        "title": "Where is the KISS TNC?",
+        "menu_options": {
+          "reconfigure_tcp": "On the network (KISS over TCP)",
+          "reconfigure_serial": "USB or serial port of this computer"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "KISS TCP",
+        "description": "Host and port of a KISS TCP server, for example the bridge on the machine the radio is plugged into, Direwolf or a TNC with network access. The connection is retried until it works, so the radio may be switched on later.",
+        "data": {
+          "host": "Host",
+          "port": "Port"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "USB or serial port",
+        "description": "Pick the port the radio is plugged into. If it is not listed, plug the radio in and open this step again, or type the path.",
+        "data": {
+          "device": "Port",
+          "baudrate": "Speed (baud)"
+        },
+        "data_description": {
+          "device": "Best is the /dev/serial/by-id/… name: it stays the same when the radio is plugged in again.",
+          "baudrate": "USB radios (such as a Quansheng with the KISS TNC) ignore the speed; leave 115200."
+        }
       }
     },
     "error": {
       "invalid_callsign": "Not a callsign (up to 6 letters and digits, SSID 0–15).",
       "invalid_path": "A path entry is not a callsign.",
-      "invalid_symbol": "Two characters: table (/ or \\) and symbol code."
+      "invalid_symbol": "Two characters: table (/ or \\) and symbol code.",
+      "invalid_device": "Enter the port's path, starting with /dev/.",
+      "invalid_baudrate": "The speed is 1200–1000000."
     },
     "abort": {
-      "already_configured": "This callsign is already set up."
+      "already_configured": "This callsign is already set up.",
+      "reconfigure_successful": "The TNC connection is changed."
     }
   },
   "options": {

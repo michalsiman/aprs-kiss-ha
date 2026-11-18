@@ -296,3 +296,39 @@ class AprsIsTest(unittest.TestCase):
     def test_third_party(self):
         self.assertEqual(aprsis.third_party("OK1ABC", "APRS", ":OK1DEF   :hi{1", "OK1SIM-7"),
                          "}OK1ABC>APRS,TCPIP,OK1SIM-7*::OK1DEF   :hi{1")
+
+
+class TestTncConnection(unittest.TestCase):
+    def setUp(self):
+        self.ports = _load("ports")
+
+    def test_connection_update_checks_the_kind(self):
+        up = self.ports.connection_update
+        self.assertEqual(up({}), {})
+        self.assertEqual(up({"connection": "tcp", "host": " 10.0.0.5 ", "port": "8001"}),
+                         {"connection": "tcp", "host": "10.0.0.5", "port": 8001})
+        self.assertEqual(up({"connection": "serial", "device": "/dev/ttyUSB0", "baudrate": 115200}),
+                         {"connection": "serial", "device": "/dev/ttyUSB0", "baudrate": 115200})
+        for bad in ({"connection": "usb"}, {"connection": "tcp", "host": "", "port": 1},
+                    {"connection": "tcp", "host": "x", "port": 70000},
+                    {"connection": "serial", "device": "COM3", "baudrate": 9600},
+                    {"connection": "serial", "device": "/dev/ttyUSB0", "baudrate": 300}):
+            with self.assertRaises(ValueError):
+                up(bad)
+
+    def test_ports_prefer_the_by_id_name(self):
+        ports = self.ports
+        links = {"/dev/serial/by-id/usb-QinHeng_CH340-if00-port0": "/dev/ttyUSB0"}
+        globs = {"/dev/serial/by-id/*": list(links), "/dev/ttyUSB*": ["/dev/ttyUSB0"], "/dev/ttyACM*": ["/dev/ttyACM0"]}
+        orig_glob, orig_real = ports.glob.glob, ports.os.path.realpath
+        ports.glob.glob = lambda pattern: globs.get(pattern, [])
+        ports.os.path.realpath = lambda path: links.get(path, path)
+        sys.modules["serial"] = None  # no pyserial: names only
+        try:
+            found = ports.list_serial_ports()
+        finally:
+            ports.glob.glob, ports.os.path.realpath = orig_glob, orig_real
+            del sys.modules["serial"]
+        self.assertEqual([p["device"] for p in found],
+                         ["/dev/serial/by-id/usb-QinHeng_CH340-if00-port0", "/dev/ttyACM0"])
+        self.assertEqual(found[0]["label"], "ttyUSB0")

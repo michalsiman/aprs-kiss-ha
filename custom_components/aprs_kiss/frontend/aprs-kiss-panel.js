@@ -37,7 +37,7 @@ const COG = 'M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15
 
 const TEXTS = {
   en: {
-    settings: 'Settings', callsign: 'Callsign', ssid: 'SSID', symbol: 'Icon (APRS symbol)', comment: 'Position comment', path: 'Digipeater path', beacon: 'Send position every (minutes, 0 = off, at least 10)', beaconIs: 'Send it regularly over the internet too (APRS-IS)', beaconHint: 'By radio while Transmit is on; over the internet only with this box ticked and APRS-IS connected. The position is Home Assistant\'s home, visible to everyone on aprs.fi.', tracked: 'Callsigns to track on the map', incoming: 'Accept incoming packet connections', txdelay: 'TX delay sent to the TNC (ms, 0 = leave)', station: 'Station', aprsis: 'APRS-IS (internet)', aprsisOn: 'Connect to APRS-IS', server: 'Server', port: 'Port', passcode: 'APRS-IS password (passcode)', licenceAsk: 'APRS-IS is for licensed radio amateurs only. To switch it on, type:', licenceText: 'I hold a valid amateur radio licence', licenceRequired: 'To switch APRS-IS on, type the sentence about your licence exactly as shown.', show: 'Show', hide: 'Hide', passHint: 'Empty: computed from your callsign (the standard APRS-IS passcode). Enter your own if you were given a different one.', passOwn: 'Your own passcode is saved. Clear the field to compute it from the callsign.', radius: 'Receive packets within (km of home, 0 = none)', igateRx: 'iGate: send packets heard on the radio to APRS-IS', igateTx: 'iGate: send internet messages to local stations by radio', unsaved: 'Changes are not saved yet: press Save.', save: 'Save', saved: 'Saved; the integration restarts with the new settings.', isState: 'APRS-IS', verified: 'logged in', unverified: 'connected, not verified (check the passcode)', disconnectedIs: 'not connected', passAuto: 'computed automatically', igateHint: 'Sending to APRS-IS needs no transmitter; gating to the radio needs Transmit on and a licence.', ssidHint: 'Usual meanings of the SSID:',
+    tncCard: 'TNC connection', tncKind: 'Connection', tncTcp: 'Network (KISS over TCP)', tncSerial: 'USB or serial port', tncHost: 'Address', tncPort: 'Port', tncDevice: 'Port', tncOther: 'Other (type the path)…', tncNone: 'No port found. Plug the radio in and press Search again.', tncSearch: 'Search again', tncBaud: 'Speed (baud)', tncBaudHint: 'USB radios (such as a Quansheng with the KISS TNC) ignore the speed; leave 115200.', tncDevicePh: '/dev/serial/by-id/…', tncHostRequired: 'Enter the TNC address.', tncDeviceRequired: 'Pick a port, or type its path starting with /dev/.', tncState: 'TNC', tncOnline: 'connected', tncOffline: 'not connected', tncHint: 'A port of the computer Home Assistant runs on. A radio plugged into another computer is reached over the network through a KISS TCP bridge.', settings: 'Settings', callsign: 'Callsign', ssid: 'SSID', symbol: 'Icon (APRS symbol)', comment: 'Position comment', path: 'Digipeater path', beacon: 'Send position every (minutes, 0 = off, at least 10)', beaconIs: 'Send it regularly over the internet too (APRS-IS)', beaconHint: 'By radio while Transmit is on; over the internet only with this box ticked and APRS-IS connected. The position is Home Assistant\'s home, visible to everyone on aprs.fi.', tracked: 'Callsigns to track on the map', incoming: 'Accept incoming packet connections', txdelay: 'TX delay sent to the TNC (ms, 0 = leave)', station: 'Station', aprsis: 'APRS-IS (internet)', aprsisOn: 'Connect to APRS-IS', server: 'Server', port: 'Port', passcode: 'APRS-IS password (passcode)', licenceAsk: 'APRS-IS is for licensed radio amateurs only. To switch it on, type:', licenceText: 'I hold a valid amateur radio licence', licenceRequired: 'To switch APRS-IS on, type the sentence about your licence exactly as shown.', show: 'Show', hide: 'Hide', passHint: 'Empty: computed from your callsign (the standard APRS-IS passcode). Enter your own if you were given a different one.', passOwn: 'Your own passcode is saved. Clear the field to compute it from the callsign.', radius: 'Receive packets within (km of home, 0 = none)', igateRx: 'iGate: send packets heard on the radio to APRS-IS', igateTx: 'iGate: send internet messages to local stations by radio', unsaved: 'Changes are not saved yet: press Save.', save: 'Save', saved: 'Saved; the integration restarts with the new settings.', isState: 'APRS-IS', verified: 'logged in', unverified: 'connected, not verified (check the passcode)', disconnectedIs: 'not connected', passAuto: 'computed automatically', igateHint: 'Sending to APRS-IS needs no transmitter; gating to the radio needs Transmit on and a licence.', ssidHint: 'Usual meanings of the SSID:',
     newVersion: 'A new version of APRS & Packet is installed. Reload the page to use it.', reload: 'Reload page',
     chat: 'Chat', chatHint: 'Packet chat: Enter sends the text to everyone on the frequency as it is (a UI frame to CQ, direct).', chatPh: 'Write a message', chatEmpty: 'Nothing heard yet.',
     viaIs: 'only over the internet (APRS-IS)', isLegend: '🌐 = only over the internet (APRS-IS), not heard by the radio',
@@ -51,7 +51,7 @@ const TEXTS = {
     txOffHint: 'Transmitting is off. Switch it on to connect or send.', state: { pending: 'waiting for ack', acked: 'acknowledged', rejected: 'rejected', failed: 'no ack', sent: 'sent' },
   },
   cs: {
-    settings: 'Nastavení', callsign: 'Značka', ssid: 'SSID', symbol: 'Ikona (APRS symbol)', comment: 'Komentář k poloze', path: 'Cesta přes digipeatery', beacon: 'Posílat polohu každých (minut, 0 = ne, nejméně 10)', beaconIs: 'Posílat pravidelně i přes internet (APRS-IS)', beaconHint: 'Rádiem, když je zapnuté vysílání; přes internet jen se zaškrtnutím a připojeným APRS-IS. Poloha je domov z Home Assistantu, na aprs.fi ji uvidí každý.', tracked: 'Značky sledované na mapě', incoming: 'Přijímat příchozí packet spojení', txdelay: 'TX delay pro TNC (ms, 0 = neměnit)', station: 'Stanice', aprsis: 'APRS-IS (internet)', aprsisOn: 'Připojit se k APRS-IS', server: 'Server', port: 'Port', passcode: 'Heslo pro APRS-IS (passcode)', licenceAsk: 'APRS-IS je jen pro radioamatéry s licencí. Pro zapnutí napiš:', licenceText: 'mám platnou radioamatérskou licenci', licenceRequired: 'Pro zapnutí APRS-IS napiš větu o licenci přesně tak, jak je uvedená.', show: 'Zobrazit', hide: 'Skrýt', passHint: 'Prázdné: spočítá se z tvé značky (standardní passcode APRS-IS). Zadej vlastní, pokud ti bylo přiděleno jiné.', passOwn: 'Je uložené tvoje vlastní heslo. Smazáním pole se bude počítat ze značky.', radius: 'Přijímat pakety do (km od domova, 0 = žádné)', igateRx: 'iGate: posílat pakety slyšené rádiem do APRS-IS', igateTx: 'iGate: zprávy z internetu pro místní stanice vysílat rádiem', unsaved: 'Změny ještě nejsou uložené: klikni na Uložit.', save: 'Uložit', saved: 'Uloženo; integrace se restartuje s novým nastavením.', isState: 'APRS-IS', verified: 'přihlášeno', unverified: 'připojeno, neověřeno (zkontroluj passcode)', disconnectedIs: 'nepřipojeno', passAuto: 'spočítá se automaticky', igateHint: 'Posílání do APRS-IS nepotřebuje vysílač; brána do rádia potřebuje zapnuté vysílání a licenci.', ssidHint: 'Obvyklé významy SSID:',
+    tncCard: 'Připojení TNC', tncKind: 'Připojení', tncTcp: 'Síť (KISS přes TCP)', tncSerial: 'USB nebo sériový port', tncHost: 'Adresa', tncPort: 'Port', tncDevice: 'Port', tncOther: 'Jiný (napsat cestu)…', tncNone: 'Žádný port nenalezen. Připoj rádio a klikni na Hledat znovu.', tncSearch: 'Hledat znovu', tncBaud: 'Rychlost (baud)', tncBaudHint: 'Rádia s USB (třeba Quansheng s KISS TNC) rychlost nepoužívají, nech 115200.', tncDevicePh: '/dev/serial/by-id/…', tncHostRequired: 'Zadej adresu TNC.', tncDeviceRequired: 'Vyber port, nebo napiš jeho cestu začínající /dev/.', tncState: 'TNC', tncOnline: 'připojeno', tncOffline: 'nepřipojeno', tncHint: 'Port počítače, na kterém běží Home Assistant. Rádio připojené k jinému počítači se připojuje sítí přes KISS TCP most.', settings: 'Nastavení', callsign: 'Značka', ssid: 'SSID', symbol: 'Ikona (APRS symbol)', comment: 'Komentář k poloze', path: 'Cesta přes digipeatery', beacon: 'Posílat polohu každých (minut, 0 = ne, nejméně 10)', beaconIs: 'Posílat pravidelně i přes internet (APRS-IS)', beaconHint: 'Rádiem, když je zapnuté vysílání; přes internet jen se zaškrtnutím a připojeným APRS-IS. Poloha je domov z Home Assistantu, na aprs.fi ji uvidí každý.', tracked: 'Značky sledované na mapě', incoming: 'Přijímat příchozí packet spojení', txdelay: 'TX delay pro TNC (ms, 0 = neměnit)', station: 'Stanice', aprsis: 'APRS-IS (internet)', aprsisOn: 'Připojit se k APRS-IS', server: 'Server', port: 'Port', passcode: 'Heslo pro APRS-IS (passcode)', licenceAsk: 'APRS-IS je jen pro radioamatéry s licencí. Pro zapnutí napiš:', licenceText: 'mám platnou radioamatérskou licenci', licenceRequired: 'Pro zapnutí APRS-IS napiš větu o licenci přesně tak, jak je uvedená.', show: 'Zobrazit', hide: 'Skrýt', passHint: 'Prázdné: spočítá se z tvé značky (standardní passcode APRS-IS). Zadej vlastní, pokud ti bylo přiděleno jiné.', passOwn: 'Je uložené tvoje vlastní heslo. Smazáním pole se bude počítat ze značky.', radius: 'Přijímat pakety do (km od domova, 0 = žádné)', igateRx: 'iGate: posílat pakety slyšené rádiem do APRS-IS', igateTx: 'iGate: zprávy z internetu pro místní stanice vysílat rádiem', unsaved: 'Změny ještě nejsou uložené: klikni na Uložit.', save: 'Uložit', saved: 'Uloženo; integrace se restartuje s novým nastavením.', isState: 'APRS-IS', verified: 'přihlášeno', unverified: 'připojeno, neověřeno (zkontroluj passcode)', disconnectedIs: 'nepřipojeno', passAuto: 'spočítá se automaticky', igateHint: 'Posílání do APRS-IS nepotřebuje vysílač; brána do rádia potřebuje zapnuté vysílání a licenci.', ssidHint: 'Obvyklé významy SSID:',
     newVersion: 'Je nainstalovaná nová verze APRS & Packet. Načti stránku znovu, aby se použila.', reload: 'Načíst znovu',
     chat: 'Chat', chatHint: 'Packetový chat: Enter odešle text tak, jak je, všem na kmitočtu (UI rámec na CQ, přímo).', chatPh: 'Napiš zprávu', chatEmpty: 'Zatím nic nepřišlo.',
     viaIs: 'jen přes internet (APRS-IS)', isLegend: '🌐 = jen přes internet (APRS-IS), rádio ji neslyšelo',
@@ -316,7 +316,7 @@ class AprsKissPanel extends HTMLElement {
         .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 12px; overflow: auto; padding-bottom: 12px; }
         .form .card { display: flex; flex-direction: column; gap: 10px; overflow: visible; min-height: auto; min-width: 0; }
         .form input:not([type=checkbox]), .form select { width: 100%; min-width: 0; box-sizing: border-box; } .form .callrow input { width: auto; } .form .callrow select { width: 90px; flex: none; }
-        .form { align-content: start; } .callrow input.f-pass { text-transform: none; }
+        .form { align-content: start; } .callrow input.f-pass { text-transform: none; } .form .callrow select.f-device { flex: 1; width: auto; min-width: 0; }
         .field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--secondary-text-color); }
         .field input, .field select { color: var(--primary-text-color); }
         .field.check { flex-direction: row; align-items: center; gap: 8px; color: var(--primary-text-color); font-size: 14px; }
@@ -555,6 +555,28 @@ class AprsKissPanel extends HTMLElement {
       · RF→IS ${st.igate_stats.rf_to_is} · IS→RF ${st.igate_stats.is_to_rf} · ✉ ${st.igate_stats.is_messages}</div>`;
     main.innerHTML = `
       <div class="form">
+        <div class="card"><h2>${t.tncCard}</h2>
+          <div class="hint">${t.tncState}: ${st.tnc?.connected ? `<span class="ok">${t.tncOnline}</span>` : t.tncOffline + (st.tnc?.error ? ` (${esc(st.tnc.error)})` : '')}</div>
+          <label class="field">${t.tncKind}
+            <select class="f-conn"><option value="tcp" ${st.connection !== 'serial' ? 'selected' : ''}>${t.tncTcp}</option>
+            <option value="serial" ${st.connection === 'serial' ? 'selected' : ''}>${t.tncSerial}</option></select></label>
+          <div class="f-tcp-box">
+            <label class="field">${t.tncHost}<input class="f-tnc-host" value="${esc(st.host || '')}" placeholder="192.168.0.10" autocomplete="off"></label>
+            <label class="field">${t.tncPort}<input class="f-tnc-port" type="number" min="1" max="65535" value="${st.port || 8001}"></label>
+          </div>
+          <div class="f-serial-box">
+            <label class="field">${t.tncDevice}
+              <div class="callrow"><select class="f-device"></select>
+              <button type="button" class="btn secondary f-search">${t.tncSearch}</button></div></label>
+            <div class="hint f-ports-none" hidden>${t.tncNone}</div>
+            <label class="field f-device-own-box" hidden><input class="f-device-own" value="" placeholder="${t.tncDevicePh}" autocomplete="off"></label>
+            <label class="field">${t.tncBaud}
+              <select class="f-baud">${[1200, 4800, 9600, 19200, 38400, 57600, 115200].map((b) => `<option value="${b}" ${(st.baudrate || 115200) === b ? 'selected' : ''}>${b}</option>`).join('')}
+              ${[1200, 4800, 9600, 19200, 38400, 57600, 115200].includes(st.baudrate || 115200) ? '' : `<option value="${st.baudrate}" selected>${st.baudrate}</option>`}</select>
+              <span>${t.tncBaudHint}</span></label>
+            <div class="hint">${t.tncHint}</div>
+          </div>
+        </div>
         <div class="card"><h2>${t.station}</h2>
           <label class="field">${t.callsign}
             <div class="callrow"><input class="f-call" value="${esc(base || '')}" maxlength="6">
@@ -591,6 +613,29 @@ class AprsKissPanel extends HTMLElement {
       </div>
       <div class="row"><button class="btn save">${t.save}</button><span class="msg-saved"></span><span class="error">${esc(this._error)}</span></div>`;
     const q = (c) => main.querySelector(c);
+    // TNC connection: show the fields of the chosen kind; ports are looked up on the HA machine.
+    const connBoxes = () => {
+      const serial = q('.f-conn').value === 'serial';
+      q('.f-tcp-box').hidden = serial;
+      q('.f-serial-box').hidden = !serial;
+    };
+    const ownBox = () => { q('.f-device-own-box').hidden = q('.f-device').value !== '__own'; };
+    const loadPorts = async () => {
+      const keep = q('.f-device').value && q('.f-device').value !== '__own' ? q('.f-device').value : (st.device || '');
+      let ports = [];
+      try { ports = (await this._hass.callWS({ type: 'aprs_kiss/serial_ports' })).ports || []; } catch (e) { ports = []; }
+      const known = ports.some((p) => p.device === keep);
+      q('.f-device').innerHTML = ports.map((p) => `<option value="${esc(p.device)}" ${p.device === keep ? 'selected' : ''}>${esc(p.label)}</option>`).join('')
+        + (keep && !known ? `<option value="${esc(keep)}" selected>${esc(keep)}</option>` : '')
+        + `<option value="__own" ${!ports.length && !keep ? 'selected' : ''}>${t.tncOther}</option>`;
+      q('.f-ports-none').hidden = ports.length > 0;
+      ownBox();
+    };
+    q('.f-conn').addEventListener('change', () => { connBoxes(); if (q('.f-conn').value === 'serial') loadPorts(); });
+    q('.f-device').addEventListener('change', () => { ownBox(); if (!q('.f-device-own-box').hidden) q('.f-device-own').focus(); });
+    q('.f-search').addEventListener('click', loadPorts);
+    connBoxes();
+    loadPorts();
     q('.f-showpass').addEventListener('click', () => {
       const f = q('.f-pass');
       f.type = f.type === 'password' ? 'text' : 'password';
@@ -619,6 +664,10 @@ class AprsKissPanel extends HTMLElement {
         aprsis_passcode: q('.f-pass').value.trim(), aprsis_radius_km: Number(q('.f-radius').value) || 0,
         igate_rx: q('.f-irx').checked, igate_tx: q('.f-itx').checked,
         licence_text: q('.f-licence').value,
+        connection: q('.f-conn').value,
+        host: q('.f-tnc-host').value.trim(), port: Number(q('.f-tnc-port').value) || 0,
+        device: q('.f-device').value === '__own' ? q('.f-device-own').value.trim() : q('.f-device').value,
+        baudrate: Number(q('.f-baud').value) || 115200,
       };
       // Errors stay next to the button; re-rendering would lose what was typed.
       const err = main.querySelector('.row .error');
@@ -628,7 +677,9 @@ class AprsKissPanel extends HTMLElement {
         r = await this._hass.callWS({ type: 'aprs_kiss/set_settings', settings, entry_id: this._state?.entry_id });
       } catch (e) {
         const text = e.message || String(e);
-        err.textContent = /licence_required/.test(text) ? t.licenceRequired : text;
+        err.textContent = /licence_required/.test(text) ? t.licenceRequired
+          : /tnc_host_required/.test(text) ? t.tncHostRequired
+            : /tnc_device_required/.test(text) ? t.tncDeviceRequired : text;
         if (/licence_required/.test(text)) { licenceBox(); q('.f-licence').focus(); }
         return;
       }
