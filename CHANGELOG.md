@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- The *APRS-IS connected* sensor no longer carries the line and iGate counters (lines in and out, RF→IS, IS→RF, messages). They grew with every packet heard, and each change was a new row in Home Assistant's database (about 3,700 a day, while the connection itself changed a few times in ten days). The sensor keeps the server, the host and the last error; the counters stay in the panel's Settings.
+
 ## [0.3.5] - 2026-11-19
 
 - Settings: new *TNC connection* card at the top: network (address and port) or USB / serial port, picked from the ports found on the Home Assistant machine (Search again; *Other* to type a path) with the speed. Saving restarts the integration with the new connection. The card also shows whether the TNC is connected and the last error.
