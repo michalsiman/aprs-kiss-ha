@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.5] - 2026-11-19
 
 - Settings: new *TNC connection* card at the top: network (address and port) or USB / serial port, picked from the ports found on the Home Assistant machine (Search again; *Other* to type a path) with the speed. Saving restarts the integration with the new connection. The card also shows whether the TNC is connected and the last error.
 - The setup step for a serial TNC lists the ports found (the stable /dev/serial/by-id/… name first) instead of a bare text field, and the speed defaults to 115200.
