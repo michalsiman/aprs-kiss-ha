@@ -40,6 +40,8 @@ class AprsIsConnected(AprsKissEntity, BinarySensorEntity):
 
     @property
     def extra_state_attributes(self):
+        # Only what changes with the connection. Line and iGate counters grow
+        # with every packet heard, and each change would be a new row in the
+        # recorder; they are shown in the panel's settings instead.
         c = self.hub.aprsis
-        return {"server": c.server_name, "host": c.host, "last_error": c.last_error,
-                "lines_in": c.lines_in, "lines_out": c.lines_out, **self.hub.igate_stats} if c else {}
+        return {"server": c.server_name, "host": c.host, "last_error": c.last_error} if c else {}
