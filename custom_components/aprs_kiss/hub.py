@@ -73,6 +73,7 @@ class Hub:
         self._msg_counter = 0
         self.messages: deque[dict[str, Any]] = deque(maxlen=MESSAGE_HISTORY)
         self.monitor: deque[str] = deque(maxlen=MONITOR_LINES)
+        self.monitor_rf: deque[str] = deque(maxlen=MONITOR_LINES)  # the same without APRS-IS lines
         self.terminal: deque[dict[str, Any]] = deque(maxlen=TERMINAL_LINES)
         self.chat: deque[dict[str, Any]] = deque(maxlen=CHAT_LINES)
         self._chat_recent: dict[str, float] = {}
@@ -190,6 +191,8 @@ class Hub:
     def _monitor(self, line: str, outgoing: bool = False) -> None:
         entry = f"{time.strftime('%H:%M:%S')} {'>>' if outgoing else '<<'} {line}"
         self.monitor.append(entry)
+        if not line.startswith("[IS] "):
+            self.monitor_rf.append(entry)
         self.hass.bus.async_fire(EVENT_TERMINAL, {"entry_id": self.entry.entry_id, "kind": "monitor", "line": entry})
 
     @callback

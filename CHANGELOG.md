@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.7] - 2026-11-22
+
+- Third-party packets (`}`), which an iGate uses to put an internet station on the air, are now unpacked: the station inside shows on the map at its position, with *iGate OK0XYZ* in its popup and in the station list until your radio hears it directly.
+- Messages for you that an iGate relays from the internet by radio are now received and acknowledged (the ack goes back by radio for the iGate to pass on). Before, they were dropped unless APRS-IS was also connected.
+- Monitor: the radio's frames are kept apart from APRS-IS lines, so with *From the internet (APRS-IS)* switched off a busy APRS-IS feed no longer pushes them out of the history.
+
 ## [0.3.6] - 2026-11-19
 
 - The *APRS-IS connected* sensor no longer carries the line and iGate counters (lines in and out, RF→IS, IS→RF, messages). They grew with every packet heard, and each change was a new row in Home Assistant's database (about 3,700 a day, while the connection itself changed a few times in ten days). The sensor keeps the server, the host and the last error; the counters stay in the panel's Settings.

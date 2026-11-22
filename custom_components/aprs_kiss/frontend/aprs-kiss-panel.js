@@ -251,6 +251,10 @@ class AprsKissPanel extends HTMLElement {
     if (d.kind === 'monitor') {
       this._state.monitor.push(d.line);
       if (this._state.monitor.length > 500) this._state.monitor.shift();
+      if (!isIsLine(d.line)) {  // radio lines kept apart, so a busy APRS-IS feed cannot push them out
+        (this._state.monitor_rf ||= []).push(d.line);
+        if (this._state.monitor_rf.length > 500) this._state.monitor_rf.shift();
+      }
       if (this._tab === 'monitor' && !this._paused) this._appendMonitor(d.line);
     } else if (d.kind === 'terminal') {
       this._state.terminal.push(d.entry);
@@ -740,7 +744,8 @@ class AprsKissPanel extends HTMLElement {
       <button class="btn secondary clear">${t.clear}</button></div>
       <pre class="mon"></pre>`;
     const pre = main.querySelector('.mon');
-    pre.textContent = this._state.monitor.filter((l) => this._monIs || !isIsLine(l)).join('\n') + '\n';
+    const lines = this._monIs ? this._state.monitor : (this._state.monitor_rf || this._state.monitor.filter((l) => !isIsLine(l)));
+    pre.textContent = lines.join('\n') + '\n';
     pre.scrollTop = pre.scrollHeight;
     main.querySelector('.pause').addEventListener('change', (e) => { this._paused = e.target.checked; if (!this._paused) this._renderMonitor(main); });
     main.querySelector('.mon-is').addEventListener('change', (e) => {
@@ -748,7 +753,7 @@ class AprsKissPanel extends HTMLElement {
       try { localStorage.setItem('aprs-kiss-mon-is', this._monIs ? '1' : '0'); } catch { /* private mode */ }
       this._renderMonitor(main);
     });
-    main.querySelector('.clear').addEventListener('click', () => { this._state.monitor = []; this._renderMonitor(main); });
+    main.querySelector('.clear').addEventListener('click', () => { this._state.monitor = []; this._state.monitor_rf = []; this._renderMonitor(main); });
   }
 
   _appendMonitor(line) {
@@ -787,7 +792,7 @@ class AprsKissPanel extends HTMLElement {
     const t = this._t;
     return `<table>
       <tr><th>Call</th><th>${t.lastHeard}</th><th class="pos">${t.position}</th><th>${t.comment}</th></tr>
-      ${heard.map((h) => `<tr><td>${h.last_rf ? '' : `<span title="${t.viaIs}">🌐 </span>`}${esc(h.call)}</td><td>${time(h.last_heard)}</td>
+      ${heard.map((h) => `<tr><td>${h.last_rf ? '' : `<span title="${t.viaIs}">🌐 </span>`}${esc(h.call)}${h.gated_by ? `<br><small>iGate ${esc(h.gated_by)}</small>` : ''}</td><td>${time(h.last_heard)}</td>
         <td class="pos">${h.latitude != null ? `${h.latitude.toFixed(4)}, ${h.longitude.toFixed(4)}` : ''}</td><td>${wxText(h.weather) ? `<span class="wx">🌡 ${esc(wxText(h.weather))}</span><br>` : ''}${esc(h.comment || h.status || '')}</td></tr>`).join('')}
     </table>${heard.some((h) => !h.last_rf) ? `<div class="hint">${t.isLegend}</div>` : ''}`;
   }
@@ -919,7 +924,7 @@ AprsKissPanel.prototype._drawMarkers = function drawMarkers(heard) {
     const rf = !!h.last_rf;
     L.circleMarker(p, { radius: rf ? 7 : 6, color: '#fff', weight: 2, fillColor: rf ? '#fb8c00' : '#8e24aa', fillOpacity: rf ? 1 : 0.85 })
       .bindTooltip(`${rf ? '' : '🌐 '}${esc(h.call)}`, { permanent: true, direction: 'right', className: 'call-label' })
-      .bindPopup(`<b>${esc(h.call)}</b><br>${time(h.last_heard)}${rf ? '' : '<br>🌐 ' + this._t.viaIs}${wxText(h.weather) ? '<br>🌡 ' + esc(wxText(h.weather)) : ''}${h.comment ? '<br>' + esc(h.comment) : ''}${h.path?.length ? '<br><small>' + esc(h.path.join(',')) + '</small>' : ''}`, POPUP)
+      .bindPopup(`<b>${esc(h.call)}</b><br>${time(h.last_heard)}${rf ? '' : '<br>🌐 ' + this._t.viaIs}${h.gated_by ? '<br>iGate ' + esc(h.gated_by) : ''}${wxText(h.weather) ? '<br>🌡 ' + esc(wxText(h.weather)) : ''}${h.comment ? '<br>' + esc(h.comment) : ''}${h.path?.length ? '<br><small>' + esc(h.path.join(',')) + '</small>' : ''}`, POPUP)
       .addTo(this._markers);
   }
   if (this._mapView) return;  // the user's view wins

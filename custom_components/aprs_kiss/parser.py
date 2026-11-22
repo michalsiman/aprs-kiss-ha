@@ -22,6 +22,16 @@ def parse(tnc2: str) -> dict[str, Any]:
     except (ParseError, UnknownFormat) as err:
         src, _, rest = tnc2.partition(">")
         return {"from": src, "format": "unknown", "text": rest.partition(":")[2], "error": str(err)}
+    out = _keep(packet)
+    inner = packet.get("subpacket")
+    if packet.get("format") == "thirdparty" and isinstance(inner, dict) and inner.get("from"):
+        # "}" third-party traffic, typically an iGate putting an internet packet on the air:
+        # the station that matters, its position or a message for us, is inside.
+        out["thirdparty"] = {**_keep(inner), "raw": inner.get("raw", ""), "path": list(inner.get("path") or [])}
+    return out
+
+
+def _keep(packet: dict[str, Any]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for key in KEEP:
         if key in packet and packet[key] is not None:

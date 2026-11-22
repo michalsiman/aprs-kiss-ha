@@ -136,6 +136,14 @@ class Station:
         self._on_packet(packet)
         if packet.get("format") == "message" and self._for_me(packet.get("addresse")):
             self._handle_message(packet, now, via_is=False)
+        inner = packet.get("thirdparty")
+        if isinstance(inner, dict) and inner.get("from") and inner["from"] != self.me:
+            # An iGate (or a gateway) relayed this station to our radio. Its position goes on the
+            # map and a message for us is ours: the ack goes back by radio for the iGate to pass on.
+            inner = {**inner, "gated_by": str(frame.source), "received_at": now}
+            self._remember_station(inner, now)
+            if inner.get("format") == "message" and self._for_me(inner.get("addresse")):
+                self._handle_message(inner, now, via_is=False)
         self._on_update()
 
     def handle_is_packet(self, packet: dict[str, Any]) -> bool:
@@ -173,6 +181,11 @@ class Station:
             # The radio path says more about the station than an internet path.
             entry["last_raw"] = packet["raw"]
             entry["path"] = packet["path"]
+        if via == "rf":
+            if packet.get("gated_by"):
+                entry["gated_by"] = packet["gated_by"]  # heard only as relayed by this iGate
+            else:
+                entry.pop("gated_by", None)
         for k in ("latitude", "longitude", "symbol", "symbol_table", "comment", "speed", "course", "altitude", "status", "weather"):
             if packet.get(k) not in (None, {}, ""):
                 entry[k] = packet[k]

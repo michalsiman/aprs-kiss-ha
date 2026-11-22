@@ -196,6 +196,37 @@ class StationTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(sent, ["OK1SIM-7>APZHAK,WIDE1-1,WIDE2-1::OK1ABC   :ack7"])
         await st.close()
 
+    async def test_third_party_packet_from_an_igate(self):
+        """OK0MIL-1 puts OK1ULX-10's internet position and a message for us on the air."""
+        parse = _load("parser").parse
+        sent, messages = [], []
+
+        async def send(raw):
+            sent.append(ax25.Frame.decode(raw).tnc2())
+
+        st = station.Station(station.StationConfig("OK1SIM-7"), send, parse, lambda p: None,
+                             messages.append, lambda: None, lambda: 1)
+        st.tx_enabled = True
+        igate, via = ax25.Address.parse("OK0MIL-1"), [ax25.Address.parse("OK0BR-1")]
+        st.handle_frame(ax25.Frame(ax25.Address.parse("APDW16"), igate, via,
+                                   rb"}OK1ULX-10>APRS,TCPIP,OK0MIL-1*:!5038.62N\01359.93E1").encode())
+        ulx = st.heard["OK1ULX-10"]
+        self.assertAlmostEqual(ulx["latitude"], 50.6437, places=3)
+        self.assertAlmostEqual(ulx["longitude"], 13.9988, places=3)
+        self.assertEqual(ulx["gated_by"], "OK0MIL-1")
+        self.assertIn("last_rf", ulx)
+        self.assertIn("OK0MIL-1", st.heard)
+        st.handle_frame(ax25.Frame(ax25.Address.parse("APDW16"), igate, via,
+                                   b"}OK1ABC>APRS,TCPIP,OK0MIL-1*::OK1SIM-7 :ahoj{12").encode())
+        await asyncio.sleep(0.1)
+        self.assertEqual([(m["from"], m["text"]) for m in messages], [("OK1ABC", "ahoj")])
+        self.assertEqual(sent, ["OK1SIM-7>APZHAK,WIDE1-1,WIDE2-1::OK1ABC   :ack12"])
+        # Heard directly later: no longer marked as relayed.
+        st.handle_frame(ax25.Frame(ax25.Address.parse("APRS"), ax25.Address.parse("OK1ULX-10"), [],
+                                   b"!5038.62N/01359.93E-").encode())
+        self.assertNotIn("gated_by", st.heard["OK1ULX-10"])
+        await st.close()
+
     async def test_internet_station_is_marked_until_the_radio_hears_it(self):
         async def send(raw):
             pass

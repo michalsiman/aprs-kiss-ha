@@ -136,6 +136,7 @@ async def ws_state(hass, connection, msg):
         "tx_enabled": hub.station.tx_enabled,
         "path": hub.conf.get("path", ""),
         "monitor": list(hub.monitor),
+        "monitor_rf": list(hub.monitor_rf),
         "terminal": list(hub.terminal),
         "chat": list(hub.chat),
         "sessions": hub.session_states(),
