@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.8] - 2026-11-22
+
+- Chat shows only text meant for people: frames to CQ, QST, ALL or your own callsign. Automatic frames, such as a digipeater's "DX de …" report of the farthest station it heard or station IDs, stay in the monitor.
+
 ## [0.3.7] - 2026-11-22
 
 - Third-party packets (`}`), which an iGate uses to put an internet station on the air, are now unpacked: the station inside shows on the map at its position, with *iGate OK0XYZ* in its popup and in the station list until your radio hears it directly.

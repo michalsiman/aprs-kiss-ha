@@ -9,5 +9,5 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/michalsiman/aprs-kiss-ha/issues",
   "requirements": ["aprslib>=0.7.2"],
-  "version": "0.3.7"
+  "version": "0.3.8"
 }
