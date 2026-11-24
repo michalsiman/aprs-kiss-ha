@@ -95,6 +95,14 @@ export function repeaterLabel(e) {
   return [text, band(mhz), mode].filter(Boolean).join(' · ');
 }
 
+/** A weather station's temperature for the second line of its tag ("4.8 °C", "4,8 °C" in Czech). */
+export function temperatureLabel(e, cs) {
+  const temp = e.weather?.temperature;
+  if (typeof temp !== 'number') return null;
+  const text = temp.toFixed(1);
+  return `${cs ? text.replace('.', ',') : text} °C`;
+}
+
 export const FILTERS = ['weather', 'moving', 'repeater', 'road'];
 
 function shown(e, kinds, now) {
@@ -344,7 +352,7 @@ export class StationMap {
       if (!h.last_rf && !this.prefs.internet) continue;
       if (!shown(h, kinds, now)) continue;
       const color = this.data.tracked.has((h.call || '').toUpperCase()) ? COLORS.tracked : h.last_rf ? COLORS.rf : COLORS.is;
-      wanted.push({ h, lat: h.latitude, lon: h.longitude, color, label: h.call, freq: repeaterLabel(h), symbol: [h.symbol_table, h.symbol] });
+      wanted.push({ h, lat: h.latitude, lon: h.longitude, color, label: h.call, freq: repeaterLabel(h) || temperatureLabel(h, this.opts.cs), symbol: [h.symbol_table, h.symbol] });
     }
     const me = this.data.me;
     if (me && me.lat != null) wanted.push({ me: true, lat: me.lat, lon: me.lon, color: COLORS.me, label: me.call, symbol: [me.symbol?.[0], me.symbol?.[1]] });
@@ -359,7 +367,7 @@ export class StationMap {
       const moved = at[i][0] !== px[i][0] || at[i][1] !== px[i][1];
       const pos = moved ? map.unproject(L.point(at[i][0], at[i][1]), zoom) : L.latLng(w.lat, w.lon);
       const [pic] = symbolInfo(w.symbol[0], w.symbol[1], this.opts.cs);
-      const bandClass = w.freq && w.freq.includes('70 cm') ? 'b70' : w.freq && w.freq.includes('2 m') ? 'b2' : 'bx';
+      const bandClass = w.freq && w.freq.endsWith('°C') ? 'wx' : w.freq && w.freq.includes('70 cm') ? 'b70' : w.freq && w.freq.includes('2 m') ? 'b2' : 'bx';
       const html = `<div class="st"><div class="disc">${pic}</div><div class="tag ${w.color}">${esc(w.label)}${w.freq ? `<div class="fq ${bandClass}">${esc(w.freq)}</div>` : ''}</div></div>`;
       const marker = L.marker(pos, { icon: L.divIcon({ className: 'stm', html, iconSize: [130, 64], iconAnchor: [65, 15] }),
         zIndexOffset: w.me ? 1000 : 0, keyboard: false });
@@ -448,7 +456,7 @@ export const MAP_CSS = `
   .stm .tag { margin-top: 1px; padding: 1px 5px; border-radius: 6px; background: rgba(255,255,255,.92); border: .8px solid rgba(0,0,0,.18);
               box-shadow: 0 1px 3px rgba(0,0,0,.25); font: 600 11px/1.3 Roboto, sans-serif; white-space: nowrap; text-align: center; pointer-events: auto; cursor: pointer; }
   .stm .tag.c-rf { color: #1565C0; } .stm .tag.c-is { color: #546E7A; } .stm .tag.c-tr { color: #E65100; } .stm .tag.c-me { color: #C62828; font-weight: 700; }
-  .stm .fq { font-size: 10px; font-weight: 700; } .stm .fq.b2 { color: #2E7D32; } .stm .fq.b70 { color: #C2185B; } .stm .fq.bx { color: #5D4037; }
+  .stm .fq { font-size: 10px; font-weight: 700; } .stm .fq.b2 { color: #2E7D32; } .stm .fq.b70 { color: #C2185B; } .stm .fq.bx { color: #5D4037; } .stm .fq.wx { color: #0277BD; }
   .place { background: none; border: none; text-align: center; color: #455A64; font: 10px/1.1 Roboto, sans-serif; white-space: nowrap; pointer-events: none; }
   .place .city { font-size: 11px; color: #37474F; } .place .city.cap { font-weight: 700; } .place .peak { color: #8D6E63; font-weight: 700; font-size: 9px; }
   .place .town { font-size: 9px; }
