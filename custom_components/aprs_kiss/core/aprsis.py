@@ -1,4 +1,4 @@
-"""APRS-IS client and iGate rules. No Home Assistant imports.
+"""APRS-IS client and iGate rules.
 
 APRS-IS (https://www.aprs-is.net) is the internet side of APRS: a TCP
 connection to a server (port 14580 takes a filter), a login line with the
@@ -33,14 +33,19 @@ LICENCE_STATEMENTS = (
 )
 
 
-def licence_confirmed(text: str | None) -> bool:
-    """True when `text` is the licence statement, in Czech or English."""
+def _plain(text: str | None) -> str:
     import unicodedata  # noqa: PLC0415
 
     plain = unicodedata.normalize("NFKD", text or "")
     plain = "".join(c for c in plain if not unicodedata.combining(c))
-    plain = " ".join(plain.lower().split()).rstrip(".!").strip()
-    return plain in LICENCE_STATEMENTS
+    return " ".join(plain.lower().split()).rstrip(".!").strip()
+
+
+def licence_confirmed(text: str | None, also: tuple[str, ...] | list[str] = ()) -> bool:
+    """True when `text` is the licence statement: in Czech or English, or one of `also`
+    (the app passes the sentence in each language it is translated to)."""
+    plain = _plain(text)
+    return bool(plain) and (plain in LICENCE_STATEMENTS or plain in {_plain(s) for s in also})
 
 
 def decode_line(raw: bytes) -> tuple[str, bool]:
@@ -141,6 +146,15 @@ class AprsIsClient:
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await self._task
         self._set(False)
+
+    def set_filter(self, filter_: str) -> None:
+        """A new server-side filter (e.g. the area moved with the GPS): sent at once if connected."""
+        if filter_ == self.filter:
+            return
+        self.filter = filter_
+        if self._writer is not None and filter_:
+            with contextlib.suppress(Exception):
+                self._writer.write(f"#filter {filter_}\r\n".encode())  # the server takes it as a command
 
     def _set(self, connected: bool) -> None:
         if connected != self.connected:

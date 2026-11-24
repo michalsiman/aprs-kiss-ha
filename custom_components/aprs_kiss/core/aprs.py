@@ -1,4 +1,4 @@
-"""Building APRS information fields (APRS 1.0.1 / 1.2), no Home Assistant imports.
+"""Building APRS information fields (APRS 1.0.1 / 1.2).
 
 Parsing of received packets is left to aprslib (see parser.py); this module
 only builds what we send: messages, acks, positions and status reports.

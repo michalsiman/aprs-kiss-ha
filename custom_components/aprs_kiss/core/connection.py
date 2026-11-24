@@ -1,7 +1,10 @@
 """Connection to a KISS TNC over TCP or a serial port, with automatic reconnect.
 
-No Home Assistant imports, so it can be tested on its own. The serial
-transport needs pyserial-asyncio-fast (a Home Assistant core dependency).
+How the bytes get to the TNC is a *transport*: a coroutine that opens a
+(reader, writer) pair of asyncio streams. "tcp" and "serial" are built in;
+platforms add their own with `register_transport` (Android USB host,
+Bluetooth SPP/BLE, ...) without touching the KISS logic here.
+The serial transport needs pyserial-asyncio-fast.
 """
 
 from __future__ import annotations
@@ -10,7 +13,7 @@ import asyncio
 import contextlib
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
 from .ax25 import CMD_PERSISTENCE, CMD_TXDELAY, KissDecoder, kiss_frame
@@ -25,13 +28,35 @@ RECONNECT_MAX = 60.0
 class TncSettings:
     """Where the TNC is and how to talk to it."""
 
-    kind: str  # "tcp" or "serial"
+    kind: str  # a registered transport: "tcp", "serial", ...
     host: str = ""
     port: int = 8001
     device: str = ""
     baudrate: int = 9600
     txdelay_ms: int | None = None  # sent to the TNC after connecting, if set
     persistence: int | None = None
+
+
+Streams = tuple[asyncio.StreamReader, asyncio.StreamWriter]
+Transport = Callable[[TncSettings], Awaitable[Streams]]
+
+
+async def _open_tcp(s: TncSettings) -> Streams:
+    return await asyncio.wait_for(asyncio.open_connection(s.host, s.port), timeout=10)
+
+
+async def _open_serial(s: TncSettings) -> Streams:
+    import serial_asyncio_fast  # noqa: PLC0415 - optional, only for serial TNCs
+
+    return await serial_asyncio_fast.open_serial_connection(url=s.device, baudrate=s.baudrate)
+
+
+TRANSPORTS: dict[str, Transport] = {"tcp": _open_tcp, "serial": _open_serial}
+
+
+def register_transport(kind: str, opener: Transport) -> None:
+    """Make another way of reaching a TNC available under `kind`."""
+    TRANSPORTS[kind] = opener
 
 
 class KissConnection:
@@ -76,13 +101,11 @@ class KissConnection:
         if self._on_state:
             self._on_state(connected)
 
-    async def _open(self) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
-        s = self._settings
-        if s.kind == "serial":
-            import serial_asyncio_fast  # noqa: PLC0415 - optional, only for serial TNCs
-
-            return await serial_asyncio_fast.open_serial_connection(url=s.device, baudrate=s.baudrate)
-        return await asyncio.wait_for(asyncio.open_connection(s.host, s.port), timeout=10)
+    async def _open(self) -> Streams:
+        opener = TRANSPORTS.get(self._settings.kind)
+        if opener is None:
+            raise OSError(f"Unknown TNC connection type: {self._settings.kind}")
+        return await opener(self._settings)
 
     async def _run(self) -> None:
         delay = RECONNECT_MIN

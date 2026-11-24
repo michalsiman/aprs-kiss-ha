@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+- **The same engine as the APRS & Packet app** (copied into `core/` by `tools/sync_core.py`), so fixes and new features come to both. The message history moves from Home Assistant's storage to `/config/aprs_kiss/state.json` by itself.
+- **Map**: each station is its APRS symbol on a light disc with its callsign; stations that would cover each other move apart with a thin line to where they really are; **trails** (the last half hour); **filters** (weather stations, moving stations, repeaters, road incidents); **repeaters show their frequency**, band and digital mode; APRS **objects** are places of their own; impossible jumps in a track start it again.
+- **Offline maps**: a basic map bundled (borders, motorways and roads, towns, peaks) and your own raster maps (MBTiles, PMTiles, RMaps, a ZIP of tiles, or a .zip/.7z of them) uploaded in Settings or copied into `/config/aprs_kiss/maps`. The map's layer button switches between online, your maps and the basic one.
+- **One switch "Send over the internet too"** (APRS-IS card): the position (button, regular) and messages go to APRS-IS as well; messages can still choose radio, both or internet.
+- **Digipeater** (fill-in or wide, aliases), **USB GPS** (NMEA) as our position, **#APRSThursday** tab, **BBS SERVER** and **TAK** modes (each instead of APRS, switched on with a safety sentence).
+
 ## [0.3.8] - 2026-11-22
 
 - Chat shows only text meant for people: frames to CQ, QST, ALL or your own callsign. Automatic frames, such as a digipeater's "DX de …" report of the farthest station it heard or station IDs, stay in the monitor.

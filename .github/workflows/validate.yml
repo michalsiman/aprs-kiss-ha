@@ -17,8 +17,8 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: pip install "aprslib>=0.7.2"
       - run: python -m unittest discover -s tests -t . -v
-      - run: python -m py_compile bridge/kiss_tcp_bridge.py custom_components/aprs_kiss/*.py
-      - run: node --check custom_components/aprs_kiss/frontend/aprs-kiss-panel.js
+      - run: python -m py_compile bridge/kiss_tcp_bridge.py custom_components/aprs_kiss/*.py custom_components/aprs_kiss/core/*.py custom_components/aprs_kiss/core/bbs/*.py
+      - run: for f in custom_components/aprs_kiss/frontend/*.js; do node --check "$f"; done
 
   hassfest:
     runs-on: ubuntu-latest

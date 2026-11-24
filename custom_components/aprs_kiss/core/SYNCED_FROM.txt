@@ -1,0 +1,1 @@
+Copied from aprs-kiss-app/src/aprs_kiss_core by tools/sync_core.py. Do not edit here.

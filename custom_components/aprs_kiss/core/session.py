@@ -1,4 +1,4 @@
-"""AX.25 v2.0 connected mode (modulo 8) for a packet radio terminal. No Home Assistant imports.
+"""AX.25 v2.0 connected mode (modulo 8) for a packet radio terminal.
 
 A KISS TNC only sends and receives frames, so the link layer runs here:
 SABM/UA to connect, I frames numbered N(S)/N(R) with a window of K frames,
@@ -31,6 +31,7 @@ T1 = 12.0           # seconds to wait for an acknowledgement (1200 Bd, a digipea
 T2 = 1.0            # delay before acknowledging, so several frames get one RR
 T3 = 300.0          # idle link check
 N2 = 8              # tries before the link is given up
+CONNECT_ATTEMPTS = N2 + 1  # the first SABM and its retries
 
 
 class Session:
@@ -52,6 +53,8 @@ class Session:
         self._on_text = on_text
         self._on_state = on_state
         self.state = DISCONNECTED
+        self.attempts = 0  # connect requests (SABM) sent for the current connection
+        self.connect_started = self.last_attempt = 0.0
         self.vs = 0          # next N(S) to send
         self.vr = 0          # next N(S) expected
         self.va = 0          # oldest unacknowledged N(S)
@@ -118,10 +121,16 @@ class Session:
         self._retries += 1
         if self._retries > N2:
             self._send(U_DM | PF, command=False)
-            self._set_state(DISCONNECTED, "link failure: no answer")
+            tries = f" after {self.attempts} attempts" if self.state == CONNECTING else ""
+            self._set_state(DISCONNECTED, f"link failure: no answer{tries}")
             return
         if self.state == CONNECTING:
             self._send(U_SABM | PF, command=True)
+            self.attempts += 1
+            self.last_attempt = time.time()
+            # Same state, so tell the owner directly: the terminal shows each try with its time.
+            self._on_state(self.state, f"connect attempt {self.attempts}/{CONNECT_ATTEMPTS} "
+                                       f"at {time.strftime('%H:%M:%S', time.localtime(self.last_attempt))}")
         elif self.state == DISCONNECTING:
             self._send(U_DISC | PF, command=True)
         elif self.state == CONNECTED:
@@ -141,6 +150,8 @@ class Session:
     def connect(self) -> None:
         self.vs = self.vr = self.va = 0
         self._retries = 0
+        self.attempts = 1
+        self.connect_started = self.last_attempt = time.time()
         self._set_state(CONNECTING, f"connecting to {self.remote}")
         self._send(U_SABM | PF, command=True)
         self._start_t1()

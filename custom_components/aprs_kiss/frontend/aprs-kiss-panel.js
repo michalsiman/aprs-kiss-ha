@@ -2,6 +2,8 @@
 
 // Everything the panel needs comes from Home Assistant: Leaflet is bundled with
 // the integration, and map tiles come through Home Assistant's tile proxy.
+import { StationMap, MAP_CSS, symbolInfo, repeaterLabel } from './aprs-map.js';
+
 const LEAFLET_JS = new URL('vendor/leaflet-src.esm.js', import.meta.url).href;
 const LEAFLET_CSS = new URL('vendor/leaflet.css', import.meta.url).href;
 const TILE_TOKEN_REFRESH_MS = 20 * 60 * 1000;
@@ -66,6 +68,80 @@ const TEXTS = {
   },
 };
 
+// Texts of the screens that came with the shared engine (map, digipeater, GPS, BBS SERVER, TAK, #APRSThursday).
+Object.assign(TEXTS.en, {
+  mapSource: 'Base map', mapAuto: 'Automatic (online, else offline)', mapOnline: 'Online (OpenStreetMap)', mapImported: 'My offline maps',
+  mapNoImported: 'My offline maps (none uploaded)', mapBasic: 'Basic offline map (borders, roads, towns)',
+  filter: 'Filter stations', filterOn: 'Shown only', filterAll: 'Show all stations', trails: 'Trails (where stations went in the last half hour)',
+  filter_weather: 'Weather stations only', filter_moving: 'Moving only (moved in the last 10 min)', filter_repeater: 'Repeaters only (with their frequency)',
+  filter_road: 'Road incidents only (crashes, work zones, floods…)', filter_weather_short: 'weather', filter_moving_short: 'moving',
+  filter_repeater_short: 'repeaters', filter_road_short: 'road incidents',
+  beaconIs: 'Send over the internet too (APRS-IS): my position (button and regular) and messages',
+  beaconHint: 'By radio while Transmit is on. With this ticked, your position and messages also go to APRS-IS (when connected); with Transmit off, over the internet only. The position is Home Assistant\'s home (or the USB GPS), visible to everyone on aprs.fi.',
+  digi: 'Digipeater', digiMode: 'Repeat packets', digiOff: 'Off', digiFillin: 'Fill-in (WIDE1-1 only)', digiWide: 'Wide (WIDEn-N)', digiHops: 'Most hops a path may ask for', digiAliases: 'Also repeat for (aliases, e.g. RELAY)',
+  digiHint: 'Only with Transmit on. A fill-in digipeater helps nearby stations reach a big digi; a wide one is for a well-placed station agreed with others.',
+  gps: 'GPS', gpsSource: 'My position from', gpsHome: 'Home Assistant\'s home', gpsUsb: 'USB GPS module (NMEA)', gpsDevice: 'GPS port', gpsBaud: 'Speed', gpsAuto: 'Automatic',
+  gpsHint: 'Cheap USB GPS modules (u-blox, VK-172…) send NMEA at 9600 or 4800 Bd. With a fix, the map and the position use the GPS (and its altitude); without one, Home Assistant\'s home.',
+  gpsState: 'GPS', gpsFix: 'fix', gpsNoFix: 'no fix', gpsSats: 'satellites',
+  modes: 'BBS SERVER and TAK', modeHint: 'Each turns the integration into something else on another frequency: everything of APRS (APRS-IS, iGate, messages, terminal, chat) stops until it is switched off.',
+  bbsSsid: 'BBS SERVER SSID', takCallsign: 'TAK callsign (empty: your callsign)', takTeam: 'Team (colour)', takRole: 'Role', takInterval: 'Send my TAK position every (minutes, 0 = only with the button)',
+  maps: 'Offline maps', mapsHint: 'Your own raster maps for when there is no internet: MBTiles, PMTiles, RMaps .sqlitedb, a ZIP of tiles (z/x/y), or a .zip/.7z with such files. Vector maps (.pbf) cannot be shown. They are kept in', mapsUpload: 'Upload a map…', mapsUploading: 'Uploading…', mapsNone: 'No offline maps yet.', mapsRemove: 'Remove', mapsRescan: 'Look again', mapsFailed: 'Cannot be shown',
+  mapErr: { vector: 'a vector map (not supported)', unknown: 'not a map file', empty: 'no maps inside', no7z: '7-Zip is not installed', read: 'cannot be read' },
+  thursday: 'Thursday', thAbout: 'Every Thursday (UTC) radio amateurs all over the world send a short message to the HOTG group. ANSRVR passes it on to everyone who wrote to the group in the last 12 hours, and sends you theirs.',
+  thRf: 'By radio, replies reach you only through an iGate that gates internet messages to the radio; over the internet (APRS-IS) it always works.',
+  thPh: 'Your message to the group (e.g. where you are, what rig)', thSend: 'Send to HOTG', thLeave: 'Leave the group', thEmpty: 'No HOTG messages yet.',
+  thMember: 'You are in the HOTG group until', thNotMember: 'Not in the HOTG group: your first message adds you to it', thWait: 'Next message possible in', thMap: 'Map and check-ins (aprs.to)',
+  thRunning: 'Running now (Thursday UTC)', thNext: 'Next one: Thursday 00:00 UTC',
+  bbs: 'BBS', bbsOn: 'BBS SERVER on', bbsOff: 'BBS SERVER is off. Switching it on turns the integration into a packet BBS: everything else (APRS, APRS-IS, iGate, position, messages, terminal, chat) stops until you switch it off.',
+  bbsRunning: 'Running as', bbsConnected: 'Connected', bbsNobody: 'Nobody connected.', bbsMessages: 'Messages', bbsNoMessages: 'No messages yet.', bbsLog: 'Log', bbsDelete: 'Delete',
+  bbsSettings: 'BBS settings', bbsSessions: 'Clients at the same time', bbsIdle: 'Disconnect after inactivity (seconds)', bbsTx: 'Maximum TX time per connection (minutes, 0 = no limit)',
+  bbsMax: 'Maximum stored messages (0 = no limit)', bbsWelcome: 'Welcome message ({name}, {bbs}, {new}… are filled in)', bbsMore: 'More options (access, beacon, how long messages are kept) are in bbs.toml in the folder', bbsReload: 'Reload bbs.toml',
+  bbsTxNeeded: 'Switch Transmit on, otherwise the BBS cannot answer.', bbsConfirmTitle: 'Switch BBS SERVER on?',
+  bbsConfirmAsk: 'While the BBS runs, everything else is off. Tune the radio to a packet channel (e.g. 144.8125-144.9625 MHz), never to the APRS frequency 144.800. To switch it on, type:',
+  bbsSentence: 'BBS SERVER must have another frequency than APRS',
+  tak: 'TAK', takOn: 'TAK on', takOff: 'TAK is off. Switching it on turns the integration into a TAK station over the radio (ATAK-compatible positions and GeoChat): everything else stops until you switch it off.',
+  takRunning: 'Running as', takStations: 'Stations', takNoStations: 'No TAK stations heard yet.', takChat: 'GeoChat', takEverybody: 'Everybody', takSendPos: 'Send my position', takNoChat: 'No messages yet.',
+  takConfirmTitle: 'Switch TAK on?', takConfirmAsk: 'While TAK runs, everything else is off. Tune the radio to a channel agreed with your team, never to the APRS frequency 144.800. Amateur radio: nothing is encrypted. To switch it on, type:',
+  takSentence: 'TAK must have another frequency than APRS', sentenceWrong: 'Type the sentence exactly as shown.', switchOn: 'Switch on', cancel: 'Cancel',
+  exclusive: 'is on: APRS, messages, terminal and chat are off.', switchOff: 'Switch off', digipeated: 'digipeated',
+});
+Object.assign(TEXTS.cs, {
+  mapSource: 'Mapový podklad', mapAuto: 'Automaticky (online, jinak offline)', mapOnline: 'Online (OpenStreetMap)', mapImported: 'Moje offline mapy',
+  mapNoImported: 'Moje offline mapy (žádné nahrané)', mapBasic: 'Základní offline mapa (hranice, silnice, města)',
+  filter: 'Filtr stanic', filterOn: 'Zobrazeno jen', filterAll: 'Zobrazit všechny stanice', trails: 'Ocásky (kudy stanice jely za poslední půlhodinu)',
+  filter_weather: 'Jen meteostanice', filter_moving: 'Jen pohybující se (pohnuly se za posledních 10 min)', filter_repeater: 'Jen převaděče (s jejich kmitočtem)',
+  filter_road: 'Jen dopravní problémy (nehody, práce na silnici, povodně…)', filter_weather_short: 'meteostanice', filter_moving_short: 'pohybující se',
+  filter_repeater_short: 'převaděče', filter_road_short: 'dopravní problémy',
+  beaconIs: 'Posílat i přes internet (APRS-IS): moji polohu (tlačítkem i pravidelně) a zprávy',
+  beaconHint: 'Rádiem, když je zapnuté vysílání. Se zaškrtnutím jde poloha i zprávy také do APRS-IS (když je připojené); s vypnutým vysíláním jen přes internet. Poloha je domov z Home Assistantu (nebo USB GPS), na aprs.fi ji uvidí každý.',
+  digi: 'Digipeater', digiMode: 'Opakovat pakety', digiOff: 'Vypnuto', digiFillin: 'Fill-in (jen WIDE1-1)', digiWide: 'Široký (WIDEn-N)', digiHops: 'Nejvíc skoků, o které si cesta může říct', digiAliases: 'Opakovat i pro (aliasy, např. RELAY)',
+  digiHint: 'Jen se zapnutým vysíláním. Fill-in digipeater pomáhá stanicím v okolí dosáhnout na velký digi; široký je pro dobře umístěnou stanici domluvenou s ostatními.',
+  gps: 'GPS', gpsSource: 'Moje poloha z', gpsHome: 'Domov z Home Assistantu', gpsUsb: 'USB GPS modul (NMEA)', gpsDevice: 'Port GPS', gpsBaud: 'Rychlost', gpsAuto: 'Automaticky',
+  gpsHint: 'Levné USB GPS moduly (u-blox, VK-172…) posílají NMEA rychlostí 9600 nebo 4800 Bd. S fixem používá mapa i poloha GPS (i výšku), bez fixu domov z Home Assistantu.',
+  gpsState: 'GPS', gpsFix: 'fix', gpsNoFix: 'bez fixu', gpsSats: 'satelitů',
+  modes: 'BBS SERVER a TAK', modeHint: 'Každý z nich udělá z integrace něco jiného na jiném kmitočtu: vše z APRS (APRS-IS, iGate, zprávy, terminál, chat) stojí, dokud se nevypne.',
+  bbsSsid: 'SSID pro BBS SERVER', takCallsign: 'Volací znak v TAK (prázdné: tvoje značka)', takTeam: 'Tým (barva)', takRole: 'Role', takInterval: 'Posílat moji TAK polohu každých (minut, 0 = jen tlačítkem)',
+  maps: 'Offline mapy', mapsHint: 'Vlastní rastrové mapy pro chvíle bez internetu: MBTiles, PMTiles, RMaps .sqlitedb, ZIP dlaždic (z/x/y), nebo .zip/.7z s takovými soubory. Vektorové mapy (.pbf) zobrazit neumí. Ukládají se do', mapsUpload: 'Nahrát mapu…', mapsUploading: 'Nahrávám…', mapsNone: 'Zatím žádné offline mapy.', mapsRemove: 'Odebrat', mapsRescan: 'Hledat znovu', mapsFailed: 'Nejde zobrazit',
+  mapErr: { vector: 'vektorová mapa (nepodporováno)', unknown: 'není to mapa', empty: 'uvnitř nejsou mapy', no7z: '7-Zip není nainstalovaný', read: 'nejde přečíst' },
+  thursday: 'Čtvrtek', thAbout: 'Každý čtvrtek (UTC) posílají radioamatéři z celého světa krátkou zprávu do skupiny HOTG. ANSRVR ji předá všem, kdo do skupiny psali za posledních 12 hodin, a tobě pošle ty jejich.',
+  thRf: 'Rádiem k tobě odpovědi dojdou jen přes iGate, který posílá zprávy z internetu do rádia; přes internet (APRS-IS) to funguje vždy.',
+  thPh: 'Tvoje zpráva pro skupinu (např. odkud vysíláš, s čím)', thSend: 'Poslat do HOTG', thLeave: 'Odhlásit ze skupiny', thEmpty: 'Zatím žádné zprávy HOTG.',
+  thMember: 'Jsi ve skupině HOTG do', thNotMember: 'Nejsi ve skupině HOTG: první zpráva tě do ní přidá', thWait: 'Další zprávu můžeš poslat za', thMap: 'Mapa a zapojení (aprs.to)',
+  thRunning: 'Právě probíhá (čtvrtek UTC)', thNext: 'Další: čtvrtek 00:00 UTC',
+  bbs: 'BBS', bbsOn: 'BBS SERVER zapnutý', bbsOff: 'BBS SERVER je vypnutý. Po zapnutí se z integrace stane packet BBS: všechno ostatní (APRS, APRS-IS, iGate, poloha, zprávy, terminál, chat) přestane fungovat, dokud ho nevypneš.',
+  bbsRunning: 'Běží jako', bbsConnected: 'Připojení', bbsNobody: 'Nikdo není připojený.', bbsMessages: 'Zprávy', bbsNoMessages: 'Zatím žádné zprávy.', bbsLog: 'Log', bbsDelete: 'Smazat',
+  bbsSettings: 'Nastavení BBS', bbsSessions: 'Počet klientů najednou', bbsIdle: 'Odpojit po nečinnosti (sekundy)', bbsTx: 'Maximální TX čas na jedno spojení (minuty, 0 = bez omezení)',
+  bbsMax: 'Maximum uložených zpráv (0 = bez omezení)', bbsWelcome: 'Uvítací zpráva ({name}, {bbs}, {new}… se doplní)', bbsMore: 'Další volby (přístup, beacon, jak dlouho držet zprávy) jsou v bbs.toml ve složce', bbsReload: 'Načíst bbs.toml znovu',
+  bbsTxNeeded: 'Zapni Vysílání, jinak BBS nemůže odpovídat.', bbsConfirmTitle: 'Zapnout BBS SERVER?',
+  bbsConfirmAsk: 'Dokud BBS běží, je všechno ostatní vypnuté. Nalaď rádio na packetový kanál (např. 144.8125-144.9625 MHz), nikdy ne na APRS kmitočet 144.800. Pro zapnutí napiš:',
+  bbsSentence: 'BBS SERVER musí mít jinou frekvenci než APRS',
+  tak: 'TAK', takOn: 'TAK zapnutý', takOff: 'TAK je vypnutý. Po zapnutí se z integrace stane TAK stanice přes rádio (polohy a GeoChat kompatibilní s ATAK): všechno ostatní přestane fungovat, dokud ho nevypneš.',
+  takRunning: 'Běží jako', takStations: 'Stanice', takNoStations: 'Zatím žádné TAK stanice.', takChat: 'GeoChat', takEverybody: 'Všem', takSendPos: 'Poslat moji polohu', takNoChat: 'Zatím žádné zprávy.',
+  takConfirmTitle: 'Zapnout TAK?', takConfirmAsk: 'Dokud TAK běží, je všechno ostatní vypnuté. Nalaď rádio na kanál domluvený s týmem, nikdy ne na APRS kmitočet 144.800. Radioamatérský provoz: nic se nešifruje. Pro zapnutí napiš:',
+  takSentence: 'TAK musí mít jinou frekvenci než APRS', sentenceWrong: 'Napiš větu přesně tak, jak je uvedená.', switchOn: 'Zapnout', cancel: 'Zrušit',
+  exclusive: 'je zapnutý: APRS, zprávy, terminál a chat jsou vypnuté.', switchOff: 'Vypnout', digipeated: 'digipeatováno',
+});
+
 /** APRS weather (aprslib units: °C, m/s, mm, hPa, %) as a short line. */
 const wxText = (w) => {
   if (!w) return '';
@@ -78,6 +154,10 @@ const wxText = (w) => {
   if (w.luminosity != null) parts.push(`☀ ${w.luminosity} W/m²`);
   return parts.join(' · ');
 };
+
+// TAK teams and roles (core/tak.py)
+const TAK_TEAMS = ['White', 'Yellow', 'Orange', 'Magenta', 'Red', 'Maroon', 'Purple', 'Dark Blue', 'Blue', 'Cyan', 'Teal', 'Green', 'Dark Green', 'Brown'];
+const TAK_ROLES = ['Team Member', 'Team Lead', 'HQ', 'Sniper', 'Medic', 'Forward Observer', 'RTO', 'K9'];
 
 const isIsLine = (line) => / (<<|>>) \[IS\] /.test(line);  // a monitor line from or to APRS-IS
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -225,10 +305,23 @@ class AprsKissPanel extends HTMLElement {
   async _load() {
     try {
       this._state = await this._hass.callWS({ type: 'aprs_kiss/state' });
+      this._extra = await this._hass.callWS({ type: 'aprs_kiss/extra', entry_id: this._state.entry_id });
     } catch (err) {
       this._error = err.message || String(err);
     }
+    if (this._extra?.mode && !['monitor', 'settings', this._extra.mode].includes(this._tab)) this._tab = this._extra.mode;
     this._render();
+  }
+
+  async _loadExtra() {
+    try {
+      this._extra = await this._hass.callWS({ type: 'aprs_kiss/extra', entry_id: this._state.entry_id });
+    } catch { /* keep the last */ }
+  }
+
+  _extraSoon(then) {
+    clearTimeout(this._extraTimer);
+    this._extraTimer = setTimeout(async () => { await this._loadExtra(); then?.(); }, 800);
   }
 
   _loadSoon() {
@@ -241,8 +334,10 @@ class AprsKissPanel extends HTMLElement {
     try {
       const s = await this._hass.callWS({ type: 'aprs_kiss/state', entry_id: this._state.entry_id });
       Object.assign(this._state, { tnc_connected: s.tnc_connected, tx_enabled: s.tx_enabled, sessions: s.sessions, messages: s.messages, heard: s.heard });
+      await this._loadExtra();
       this._renderHeader();
       if (this._tab === 'aprs') this._updateAprs();
+      else if (['bbs', 'tak', 'thursday'].includes(this._tab)) this._refreshTab?.();
     } catch { /* keep the last state */ }
   }
 
@@ -271,6 +366,8 @@ class AprsKissPanel extends HTMLElement {
     } else if (d.kind === 'aprs_message') {
       this._state.messages.push(d.message);
       if (this._tab === 'aprs') this._render();
+    } else if (['thursday', 'tak', 'bbs', 'gps'].includes(d.kind)) {
+      this._extraSoon(() => { if (this._tab === d.kind || (d.kind === 'gps' && this._tab === 'aprs')) this._refreshTab?.(); });
     }
   }
 
@@ -306,6 +403,7 @@ class AprsKissPanel extends HTMLElement {
         input, select { font: inherit; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color); }
         input.call { width: 120px; text-transform: uppercase; } input.path { width: 160px; text-transform: uppercase; }
         button.btn { font: inherit; padding: 7px 14px; border-radius: 8px; border: none; background: var(--primary-color); color: var(--text-primary-color, #fff); cursor: pointer; }
+        label.btn { display: inline-block; font: inherit; padding: 7px 14px; border-radius: 8px; background: var(--primary-color); color: var(--text-primary-color, #fff); cursor: pointer; }
         button.btn.save.dirty { box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.6); }
         .warn { color: var(--warning-color, #ff9800); }
         button.btn.secondary { background: var(--secondary-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color); }
@@ -391,6 +489,17 @@ class AprsKissPanel extends HTMLElement {
         .wx { display: inline-block; }
         td:nth-child(-n+2) { white-space: nowrap; }
         .call-label::before { display: none; }
+        ${MAP_CSS}
+        .map { height: 480px; }
+        textarea { font: 13px/1.4 ui-monospace, monospace; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color); width: 100%; box-sizing: border-box; }
+        .banner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: rgba(255, 152, 0, 0.18); border: 1px solid var(--warning-color, #ff9800); font-size: 14px; }
+        .dialog-back { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .dialog { background: var(--card-background-color); color: var(--primary-text-color); border-radius: 14px; padding: 16px 18px; max-width: 520px; width: 100%; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 24px rgba(0,0,0,.4); }
+        .dialog h3 { margin: 0; font-size: 18px; font-weight: 500; }
+        .list-row { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--divider-color); font-size: 14px; }
+        .list-row .grow { flex: 1; min-width: 0; }
+        .list-row small { color: var(--secondary-text-color); display: block; font-size: 12px; }
+        .mono { font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
       </style>
 
       <div class="page"><div class="top"><div class="update" hidden></div><header></header><nav></nav></div><main></main></div>`;
@@ -401,7 +510,11 @@ class AprsKissPanel extends HTMLElement {
     this._renderHeader();
     const t = this._t;
     const nav = this.shadowRoot.querySelector('nav');
-    nav.innerHTML = ['chat', 'terminal', 'monitor', 'aprs', 'settings'].map((k) => k === 'settings'
+    const mode = this._extra?.mode || '';
+    // BBS SERVER or TAK on: only that, the monitor and the settings
+    const tabs = mode ? [mode, 'monitor', 'settings'] : ['chat', 'terminal', 'monitor', 'aprs', 'thursday', 'settings'];
+    if (!tabs.includes(this._tab)) this._tab = tabs[0];
+    nav.innerHTML = tabs.map((k) => k === 'settings'
       ? `<button data-tab="${k}" class="gear ${this._tab === k ? 'active' : ''}" title="${t[k]}" aria-label="${t[k]}"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="${COG}"/></svg></button>`
       : `<button data-tab="${k}" class="${this._tab === k ? 'active' : ''}">${t[k]}</button>`).join('');
     nav.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
@@ -415,7 +528,11 @@ class AprsKissPanel extends HTMLElement {
       main.innerHTML = `<div class="error">${esc(this._error)}</div>`;
       return;
     }
+    this._refreshTab = null;
     if (this._tab === 'settings') this._renderSettings(main);
+    else if (this._tab === 'thursday') this._renderThursday(main);
+    else if (this._tab === 'bbs') this._renderBbs(main);
+    else if (this._tab === 'tak') this._renderTak(main);
     else if (this._tab === 'chat') this._renderChat(main);
     else if (this._tab === 'terminal') this._renderTerminal(main);
     else if (this._tab === 'monitor') this._renderMonitor(main);
@@ -437,6 +554,7 @@ class AprsKissPanel extends HTMLElement {
       <h1>APRS & Packet · ${esc(s.callsign)}</h1>
       <span class="chip"><span class="dot ${s.tnc_connected ? 'ok' : 'bad'}"></span>${t.tnc} ${s.tnc_connected ? t.online : t.offline}</span>
       <button class="chip ${s.tx_enabled ? 'tx-on' : ''}" id="tx"><span class="dot ${s.tx_enabled ? 'bad' : ''}"></span>${t.tx}: ${s.tx_enabled ? t.on : t.off}</button>
+      ${this._gpsChip()}
       ${sessions ? `<span class="chip">${esc(sessions)}</span>` : ''}`;
     if (this._narrow) {
       // On a phone Home Assistant hides its sidebar: this button opens it.
@@ -592,8 +710,6 @@ class AprsKissPanel extends HTMLElement {
           <label class="field">${t.comment}<input class="f-comment" maxlength="43" value="${esc(st.comment || '')}"></label>
           <label class="field">${t.path}<input class="f-path" value="${esc(st.path || '')}" placeholder="WIDE1-1,WIDE2-1"></label>
           <label class="field">${t.beacon}<input class="f-beacon" type="number" min="0" max="1440" value="${st.beacon_minutes || 0}"></label>
-          <label class="field check"><input type="checkbox" class="f-beacon-is" ${st.beacon_is ? 'checked' : ''}> ${t.beaconIs}</label>
-          <div class="hint">${t.beaconHint}</div>
           <label class="field">${t.tracked}<input class="f-tracked" value="${esc(st.tracked_callsigns || '')}" placeholder="OK1SIM-9, OK1ABC-7"></label>
           <label class="field check"><input type="checkbox" class="f-incoming" ${st.accept_incoming ? 'checked' : ''}> ${t.incoming}</label>
           <label class="field">${t.txdelay}<input class="f-txdelay" type="number" min="0" max="1000" step="10" value="${st.txdelay_ms || 0}"></label>
@@ -609,11 +725,43 @@ class AprsKissPanel extends HTMLElement {
             <div class="callrow"><input class="f-pass" value="${esc(st.aprsis_passcode || '')}" placeholder="${t.passAuto}" type="password" inputmode="numeric" autocomplete="off">
             <button type="button" class="btn secondary f-showpass">${t.show}</button></div>
             <span>${st.aprsis_passcode ? t.passOwn : t.passHint}</span></label>
+          <label class="field check"><input type="checkbox" class="f-beacon-is" ${st.beacon_is ? 'checked' : ''}> ${t.beaconIs}</label>
+          <div class="hint">${t.beaconHint}</div>
           <label class="field">${t.radius}<input class="f-radius" type="number" min="0" max="500" value="${st.aprsis_radius_km ?? 50}"></label>
           <label class="field check"><input type="checkbox" class="f-irx" ${st.igate_rx ? 'checked' : ''}> ${t.igateRx}</label>
           <label class="field check"><input type="checkbox" class="f-itx" ${st.igate_tx ? 'checked' : ''}> ${t.igateTx}</label>
           <div class="hint">${t.igateHint}</div>
         </div>
+        <div class="card"><h2>${t.digi}</h2>
+          <label class="field">${t.digiMode}
+            <select class="f-digi">${[['off', t.digiOff], ['fillin', t.digiFillin], ['wide', t.digiWide]].map(([k, l]) => `<option value="${k}" ${(st.digi_mode || 'off') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+          <label class="field">${t.digiHops}<select class="f-digi-hops">${[1, 2, 3].map((n) => `<option value="${n}" ${(st.digi_max_hops || 2) === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+          <label class="field">${t.digiAliases}<input class="f-digi-alias" value="${esc(st.digi_aliases || '')}" placeholder="RELAY" style="text-transform:uppercase"></label>
+          <div class="hint">${t.digiHint}${this._extra?.digipeated ? ` · ${t.digipeated}: ${this._extra.digipeated}` : ''}</div>
+        </div>
+        <div class="card"><h2>${t.gps}</h2>
+          <label class="field">${t.gpsSource}
+            <select class="f-gps"><option value="manual" ${st.gps_source !== 'usb' ? 'selected' : ''}>${t.gpsHome}</option>
+            <option value="usb" ${st.gps_source === 'usb' ? 'selected' : ''}>${t.gpsUsb}</option></select></label>
+          <div class="f-gps-box">
+            <label class="field">${t.gpsDevice}<div class="callrow"><select class="f-gps-device"></select>
+              <button type="button" class="btn secondary f-gps-search">${t.tncSearch}</button></div></label>
+            <label class="field">${t.gpsBaud}<select class="f-gps-baud">${[[0, t.gpsAuto], [4800, 4800], [9600, 9600], [38400, 38400], [115200, 115200]].map(([v, l]) => `<option value="${v}" ${(st.gps_baudrate || 0) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+            ${st.gps ? `<div class="hint">${t.gpsState}: ${st.gps.error ? `<span class="error">${esc(st.gps.error)}</span>` : st.gps.fix ? `<span class="ok">${t.gpsFix}</span> · ${st.gps.satellites ?? '?'} ${t.gpsSats}` : t.gpsNoFix}</div>` : ''}
+          </div>
+          <div class="hint">${t.gpsHint}</div>
+        </div>
+        <div class="card"><h2>${t.modes}</h2>
+          <div class="hint">${t.modeHint}</div>
+          <div class="row"><button type="button" class="btn ${st.mode === 'bbs' ? '' : 'secondary'} f-mode-bbs">${st.mode === 'bbs' ? t.switchOff + ' BBS SERVER' : t.switchOn + ' BBS SERVER'}</button>
+            <button type="button" class="btn ${st.mode === 'tak' ? '' : 'secondary'} f-mode-tak">${st.mode === 'tak' ? t.switchOff + ' TAK' : t.switchOn + ' TAK'}</button></div>
+          <label class="field">${t.bbsSsid}<select class="f-bbs-ssid">${Array.from({ length: 15 }, (_, i) => i + 1).map((n) => `<option value="${n}" ${(st.bbs_ssid || 1) === n ? 'selected' : ''}>-${n}</option>`).join('')}</select></label>
+          <label class="field">${t.takCallsign}<input class="f-tak-call" value="${esc(st.tak_callsign || '')}" style="text-transform:uppercase"></label>
+          <label class="field">${t.takTeam}<select class="f-tak-team">${TAK_TEAMS.map((x) => `<option ${(st.tak_team || 'Cyan') === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+          <label class="field">${t.takRole}<select class="f-tak-role">${TAK_ROLES.map((x) => `<option ${(st.tak_role || 'Team Member') === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+          <label class="field">${t.takInterval}<input class="f-tak-int" type="number" min="0" max="120" value="${st.tak_interval_min ?? 2}"></label>
+        </div>
+        <div class="card maps-card"><h2>${t.maps}</h2><div class="maps-body hint">…</div></div>
       </div>
       <div class="row"><button class="btn save">${t.save}</button><span class="msg-saved"></span><span class="error">${esc(this._error)}</span></div>`;
     const q = (c) => main.querySelector(c);
@@ -640,6 +788,22 @@ class AprsKissPanel extends HTMLElement {
     q('.f-search').addEventListener('click', loadPorts);
     connBoxes();
     loadPorts();
+    // USB GPS: its port from the same list as the TNC's
+    const gpsBox = () => { q('.f-gps-box').hidden = q('.f-gps').value !== 'usb'; };
+    const loadGpsPorts = async () => {
+      const keep = q('.f-gps-device').value || st.gps_device || '';
+      let ports = [];
+      try { ports = (await this._hass.callWS({ type: 'aprs_kiss/serial_ports' })).ports || []; } catch (e) { ports = []; }
+      q('.f-gps-device').innerHTML = ports.map((p) => `<option value="${esc(p.device)}" ${p.device === keep ? 'selected' : ''}>${esc(p.label)}</option>`).join('')
+        + (keep && !ports.some((p) => p.device === keep) ? `<option value="${esc(keep)}" selected>${esc(keep)}</option>` : '');
+    };
+    q('.f-gps').addEventListener('change', () => { gpsBox(); if (q('.f-gps').value === 'usb') loadGpsPorts(); });
+    q('.f-gps-search').addEventListener('click', loadGpsPorts);
+    gpsBox();
+    if (q('.f-gps').value === 'usb') loadGpsPorts();
+    q('.f-mode-bbs').addEventListener('click', () => this._setMode(st.mode === 'bbs' ? '' : 'bbs'));
+    q('.f-mode-tak').addEventListener('click', () => this._setMode(st.mode === 'tak' ? '' : 'tak'));
+    this._renderMapsCard(q('.maps-body'));
     q('.f-showpass').addEventListener('click', () => {
       const f = q('.f-pass');
       f.type = f.type === 'password' ? 'text' : 'password';
@@ -667,6 +831,11 @@ class AprsKissPanel extends HTMLElement {
         aprsis_enabled: q('.f-is').checked, aprsis_host: q('.f-host').value.trim(), aprsis_port: Number(q('.f-port').value) || 14580,
         aprsis_passcode: q('.f-pass').value.trim(), aprsis_radius_km: Number(q('.f-radius').value) || 0,
         igate_rx: q('.f-irx').checked, igate_tx: q('.f-itx').checked,
+        digi_mode: q('.f-digi').value, digi_max_hops: Number(q('.f-digi-hops').value) || 2, digi_aliases: q('.f-digi-alias').value.trim().toUpperCase(),
+        gps_source: q('.f-gps').value, gps_device: q('.f-gps').value === 'usb' ? q('.f-gps-device').value : (st.gps_device || ''),
+        gps_baudrate: Number(q('.f-gps-baud').value) || 0,
+        bbs_ssid: Number(q('.f-bbs-ssid').value) || 1, tak_callsign: q('.f-tak-call').value.trim().toUpperCase(),
+        tak_team: q('.f-tak-team').value, tak_role: q('.f-tak-role').value, tak_interval_min: Number(q('.f-tak-int').value) || 0,
         licence_text: q('.f-licence').value,
         connection: q('.f-conn').value,
         host: q('.f-tnc-host').value.trim(), port: Number(q('.f-tnc-port').value) || 0,
@@ -767,11 +936,11 @@ class AprsKissPanel extends HTMLElement {
   // ─── APRS ────────────────────────────────────────────────────────────
 
   // Radio or internet for a message: the last choice, else radio when transmitting is on.
+  // the one switch "send over the internet too" (Settings) decides the default; each message can choose
   _via() {
-    if (!this._viaChoice) {
-      try { this._viaChoice = localStorage.getItem('aprs-kiss-via'); } catch { /* private mode */ }
-    }
-    return this._viaChoice || (this._state?.tx_enabled ? 'radio' : 'internet');
+    if (this._viaChoice) return this._viaChoice;
+    if (!this._state?.tx_enabled) return 'internet';
+    return this._extra?.beacon_is ? 'both' : 'radio';
   }
 
   _aprsData() {
@@ -805,7 +974,7 @@ class AprsKissPanel extends HTMLElement {
       <div class="row msgrow">
         <input class="call to" placeholder="${t.to}" value="${esc(this._msgTo || '')}">
         <div class="seg" role="group" title="${t.viaTitle}">
-          <button type="button" data-via="radio" class="${this._via() === 'radio' ? 'on' : ''}">📻 ${t.viaRadio}</button><button type="button" data-via="internet" class="${this._via() === 'internet' ? 'on' : ''}">🌐 ${t.viaNet}</button>
+          <button type="button" data-via="radio" class="${this._via() === 'radio' ? 'on' : ''}">📻 ${t.viaRadio}</button><button type="button" data-via="both" class="${this._via() === 'both' ? 'on' : ''}">📻+🌐</button><button type="button" data-via="internet" class="${this._via() === 'internet' ? 'on' : ''}">🌐 ${t.viaNet}</button>
         </div>
         <input class="text" maxlength="67" placeholder="${t.message}">
         <button class="btn sendmsg">${t.send}</button>
@@ -835,11 +1004,10 @@ class AprsKissPanel extends HTMLElement {
     };
     main.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
       this._viaChoice = b.dataset.via;
-      try { localStorage.setItem('aprs-kiss-via', this._viaChoice); } catch { /* private mode */ }
       main.querySelectorAll('.seg button').forEach((x) => x.classList.toggle('on', x === b));
     }));
-    this._map = null;
-    this._renderMap(main.querySelector('.map'), heard);
+    this._map = this._sm = null;
+    this._renderMap(main.querySelector('.map'));
     main.querySelector('.sendmsg').addEventListener('click', send);
     main.querySelector('.text').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
   }
@@ -852,7 +1020,7 @@ class AprsKissPanel extends HTMLElement {
     const { msgs, heard } = this._aprsData();
     main.querySelector('.msgs-body').innerHTML = this._aprsMsgsHtml(msgs);
     main.querySelector('.heard-body').innerHTML = this._aprsHeardHtml(heard);
-    this._drawMarkers(heard);
+    this._drawMarkers();
   }
 }
 
@@ -868,68 +1036,318 @@ AprsKissPanel.prototype._tileToken = async function tileToken() {
   }
 };
 
-AprsKissPanel.prototype._renderMap = async function renderMap(el, heard) {
+AprsKissPanel.prototype._mapData = function mapData() {
+  const x = this._extra || {};
+  const pos = x.position || [this._hass.config.latitude, this._hass.config.longitude];
+  return {
+    heard: x.heard || this._state.heard || [],
+    me: { call: this._state.callsign, lat: pos[0], lon: pos[1], symbol: x.symbol || '/-' },
+    track: x.my_track || [],
+    tracked: new Set(x.tracked || []),
+  };
+};
+
+AprsKissPanel.prototype._stationPopup = function stationPopup(h) {
+  const t = this._t;
+  const cs = (this._hass.language || '').startsWith('cs');
+  const [pic, name] = symbolInfo(h.symbol_table, h.symbol, cs);
+  const rf = !!h.last_rf;
+  const freq = repeaterLabel(h);
+  return `<b>${pic} ${esc(h.call)}</b>${name ? ` <small>${esc(name)}</small>` : ''}${h.object_of ? `<br><small>${cs ? 'objekt od' : 'object of'} ${esc(h.object_of)}</small>` : ''}
+    <br>${time(h.last_heard)}${rf ? '' : '<br>🌐 ' + t.viaIs}${h.gated_by ? '<br>iGate ' + esc(h.gated_by) : ''}${freq ? '<br>📻 ' + esc(freq) : ''}
+    ${wxText(h.weather) ? '<br>🌡 ' + esc(wxText(h.weather)) : ''}${h.speed ? `<br>${Math.round(h.speed)} km/h${h.course != null ? ' ' + Math.round(h.course) + '°' : ''}` : ''}
+    ${h.comment ? '<br>' + esc(h.comment) : ''}${h.path?.length ? '<br><small>' + esc(h.path.join(',')) + '</small>' : ''}`;
+};
+
+AprsKissPanel.prototype._maps = async function maps() {
+  const now = Date.now();
+  if (this._mapsList && now - this._mapsList.at < 60000) return this._mapsList.maps;
+  try {
+    const r = await this._hass.callWS({ type: 'aprs_kiss/maps' });
+    this._mapsList = { maps: r.maps || [], at: now };
+  } catch { this._mapsList = { maps: [], at: now }; }
+  return this._mapsList.maps;
+};
+
+AprsKissPanel.prototype._renderMap = async function renderMap(el) {
   const mod = await import(LEAFLET_JS);
   const L = mod.default ?? mod;  // the ESM build has named exports only
   if (!el.isConnected) return;
-  const map = L.map(el, { zoomControl: true, attributionControl: true });
-  const tileUrl = (token) => `/api/map_tiles/raster/{z}/{x}/{y}.png?token=${encodeURIComponent(token)}`;
-  const token = await this._tileToken();
-  if (token) {
-    const layer = L.tileLayer(tileUrl(token), { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
-    // The token rotates; keep the layer working while the panel stays open.
-    clearInterval(this._tileTimer);
-    this._tileTimer = setInterval(async () => {
-      if (!el.isConnected) { clearInterval(this._tileTimer); return; }
-      const t = await this._tileToken();
-      if (t) layer.setUrl(tileUrl(t), true);
-    }, TILE_TOKEN_REFRESH_MS);
-  } else {
-    const note = L.control({ position: 'bottomleft' });
-    note.onAdd = () => Object.assign(document.createElement('div'), { className: 'hint', textContent: this._t.mapOffline, style: 'background:var(--card-background-color);padding:4px 8px;border-radius:6px' });
-    note.addTo(map);
-  }
+  const cs = (this._hass.language || '').startsWith('cs');
+  const sm = new StationMap(L, el, {
+    t: this._t, cs, popup: (h) => this._stationPopup(h), tileToken: () => this._tileToken(), maps: () => this._maps(),
+  });
   this._L = L;
-  this._map = map;
-  this._markers = L.layerGroup().addTo(map);
+  this._map = sm.map;
+  this._sm = sm;
+  await sm.setBase();
   // Once the user zooms or moves the map, that view stays (also after switching tabs).
   let touched = false;
   for (const ev of ['pointerdown', 'wheel', 'touchstart']) el.addEventListener(ev, () => { touched = true; }, { passive: true });
-  map.on('moveend', () => { if (touched) this._mapView = { center: map.getCenter(), zoom: map.getZoom() }; });
-  if (this._mapView) map.setView(this._mapView.center, this._mapView.zoom);
-  this._drawMarkers(heard);
-  setTimeout(() => map.invalidateSize(), 100);
+  sm.map.on('moveend', () => { if (touched) this._mapView = { center: sm.map.getCenter(), zoom: sm.map.getZoom() }; });
+  sm.update(this._mapData());
+  if (this._mapView) sm.map.setView(this._mapView.center, this._mapView.zoom);
+  else sm.fit();
+  setTimeout(() => sm.map.invalidateSize(), 100);
 };
 
-// A small popup that fits a phone's map: it scrolls inside when long, and the map
-// moves so the popup stays clear of the zoom buttons (top left).
-const POPUP = { className: 'aprs-pop', maxWidth: 230, maxHeight: 150, autoPanPaddingTopLeft: [52, 10], autoPanPaddingBottomRight: [10, 30] };
+AprsKissPanel.prototype._drawMarkers = function drawMarkers() {
+  if (this._sm) this._sm.update(this._mapData());
+};
 
-AprsKissPanel.prototype._drawMarkers = function drawMarkers(heard) {
-  const L = this._L;
-  const map = this._map;
-  if (!L || !map) return;
-  if (map._popup && map.hasLayer(map._popup)) return;  // don't close a popup being read
-  this._markers.clearLayers();
-  const points = [];
-  const home = [this._hass.config.latitude, this._hass.config.longitude];
-  L.circleMarker(home, { radius: 8, color: '#fff', weight: 2, fillColor: '#1e88e5', fillOpacity: 1 })
-    .bindTooltip(`${esc(this._state.callsign)} (${this._t.you})`, { permanent: true, direction: 'right', className: 'call-label' }).addTo(this._markers);
-  points.push(home);
-  for (const h of heard) {
-    if (h.latitude == null || h.longitude == null) continue;
-    const p = [h.latitude, h.longitude];
-    points.push(p);
-    // Orange: heard by the radio; purple: seen only on APRS-IS.
-    const rf = !!h.last_rf;
-    L.circleMarker(p, { radius: rf ? 7 : 6, color: '#fff', weight: 2, fillColor: rf ? '#fb8c00' : '#8e24aa', fillOpacity: rf ? 1 : 0.85 })
-      .bindTooltip(`${rf ? '' : '🌐 '}${esc(h.call)}`, { permanent: true, direction: 'right', className: 'call-label' })
-      .bindPopup(`<b>${esc(h.call)}</b><br>${time(h.last_heard)}${rf ? '' : '<br>🌐 ' + this._t.viaIs}${h.gated_by ? '<br>iGate ' + esc(h.gated_by) : ''}${wxText(h.weather) ? '<br>🌡 ' + esc(wxText(h.weather)) : ''}${h.comment ? '<br>' + esc(h.comment) : ''}${h.path?.length ? '<br><small>' + esc(h.path.join(',')) + '</small>' : ''}`, POPUP)
-      .addTo(this._markers);
-  }
-  if (this._mapView) return;  // the user's view wins
-  if (points.length > 1) map.fitBounds(points, { padding: [30, 30], maxZoom: 12 });
-  else map.setView(home, 10);
+// ─── header: the USB GPS ──────────────────────────────────────────────────
+
+AprsKissPanel.prototype._gpsChip = function gpsChip() {
+  const g = this._extra?.status?.gps;
+  if (!g) return '';
+  const t = this._t;
+  const cls = g.fix ? 'ok' : g.connected ? '' : 'bad';
+  return `<span class="chip" title="${esc(g.error || '')}"><span class="dot ${cls}"></span>GPS ${g.fix ? (g.satellites ?? '') + ' ' + t.gpsSats : t.gpsNoFix}</span>`;
+};
+
+// ─── a small dialog of our own (the panel lives in a shadow root) ─────────
+
+AprsKissPanel.prototype._dialog = function dialog(html, wire) {
+  const back = document.createElement('div');
+  back.className = 'dialog-back';
+  back.innerHTML = `<div class="dialog">${html}</div>`;
+  this.shadowRoot.appendChild(back);
+  const close = () => back.remove();
+  back.addEventListener('click', (e) => { if (e.target === back) close(); });
+  wire(back.querySelector('.dialog'), close);
+  return close;
+};
+
+// ─── BBS SERVER or TAK instead of APRS ────────────────────────────────────
+
+AprsKissPanel.prototype._setMode = async function setMode(mode) {
+  const t = this._t;
+  const go = async (sentence = '') => {
+    try {
+      await this._hass.callWS({ type: 'aprs_kiss/set_mode', mode, sentence, entry_id: this._state.entry_id });
+    } catch (e) {
+      return /sentence_required/.test(e.message || '') ? 'sentence' : (e.message || String(e));
+    }
+    this._tab = mode || 'aprs';
+    try { localStorage.setItem('aprs-kiss-tab', this._tab); } catch { /* private mode */ }
+    setTimeout(() => this._load(), 3500);  // the integration reloads
+    return null;
+  };
+  if (!mode) { await go(); return; }
+  const first = await go();  // typed once before: no question
+  if (first !== 'sentence') { if (first) alert(first); return; }
+  const bbs = mode === 'bbs';
+  this._dialog(`<h3>${bbs ? t.bbsConfirmTitle : t.takConfirmTitle}</h3>
+      <div>${bbs ? t.bbsConfirmAsk : t.takConfirmAsk}</div>
+      <b style="user-select:text">${bbs ? t.bbsSentence : t.takSentence}</b>
+      <input class="sentence" autocomplete="off"><div class="error"></div>
+      <div class="row" style="justify-content:flex-end"><button class="btn secondary no">${t.cancel}</button><button class="btn yes">${t.switchOn}</button></div>`,
+  (d, close) => {
+    const input = d.querySelector('.sentence');
+    input.focus();
+    const yes = async () => {
+      const r = await go(input.value);
+      if (r === 'sentence') { d.querySelector('.error').textContent = t.sentenceWrong; return; }
+      if (r) { d.querySelector('.error').textContent = r; return; }
+      close();
+    };
+    d.querySelector('.yes').addEventListener('click', yes);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') yes(); });
+    d.querySelector('.no').addEventListener('click', close);
+  });
+};
+
+AprsKissPanel.prototype._exclusiveBanner = function exclusiveBanner(mode) {
+  const t = this._t;
+  return `<div class="banner"><b>${mode === 'bbs' ? 'BBS SERVER' : 'TAK'}</b> ${t.exclusive}
+    <button class="btn secondary off">${t.switchOff}</button></div>`;
+};
+
+// ─── offline maps (Settings) ──────────────────────────────────────────────
+
+const mb = (n) => (n >= 1e9 ? (n / 1e9).toFixed(1) + ' GB' : n >= 1e6 ? (n / 1e6).toFixed(0) + ' MB' : Math.max(1, Math.round(n / 1e3)) + ' kB');
+
+AprsKissPanel.prototype._renderMapsCard = async function renderMapsCard(box) {
+  const t = this._t;
+  let r;
+  try { r = await this._hass.callWS({ type: 'aprs_kiss/maps' }); } catch (e) { box.textContent = e.message || String(e); return; }
+  this._mapsList = { maps: r.maps || [], at: Date.now() };
+  box.classList.remove('hint');
+  box.innerHTML = `<div class="hint">${t.mapsHint} <code>${esc(r.folder)}</code></div>
+    ${r.maps.length ? r.maps.map((m) => `<div class="list-row"><div class="grow">${esc(m.name)}<small>${esc(m.file)} · zoom ${m.min_zoom}–${m.max_zoom}${m.size ? ' · ' + mb(m.size) : ''}</small></div>
+      <button class="btn secondary rm" data-file="${esc(m.file)}">${t.mapsRemove}</button></div>`).join('') : `<div class="hint">${t.mapsNone}</div>`}
+    ${r.failed.map((f) => `<div class="list-row"><div class="grow">${esc(f.file)}<small class="error">${t.mapsFailed}: ${esc(t.mapErr[f.error] || f.error)}</small></div></div>`).join('')}
+    <div class="row"><label class="btn up">${t.mapsUpload}<input type="file" hidden accept=".mbtiles,.pmtiles,.sqlitedb,.zip,.7z"></label>
+      <button class="btn secondary rescan">${t.mapsRescan}</button><span class="up-state hint"></span></div>`;
+  box.querySelectorAll('.rm').forEach((b) => b.addEventListener('click', async () => {
+    await this._hass.callWS({ type: 'aprs_kiss/maps_remove', file: b.dataset.file });
+    this._renderMapsCard(box);
+  }));
+  box.querySelector('.rescan').addEventListener('click', () => this._renderMapsCard(box));
+  box.querySelector('input[type=file]').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const state = box.querySelector('.up-state');
+    state.textContent = `${t.mapsUploading} ${file.name} (${mb(file.size)})`;
+    try {
+      const res = await this._hass.fetchWithAuth(`/api/aprs_kiss/maps/upload?name=${encodeURIComponent(file.name)}`, { method: 'POST', body: file });
+      const body = await res.json();
+      if (!res.ok) { state.innerHTML = `<span class="error">${esc(t.mapErr[body.error] || body.error)}</span>`; return; }
+    } catch (err) { state.innerHTML = `<span class="error">${esc(err.message || err)}</span>`; return; }
+    this._mapsList = null;
+    this._renderMapsCard(box);
+  });
+};
+
+// ─── #APRSThursday ────────────────────────────────────────────────────────
+
+const thursdayNow = () => new Date().getUTCDay() === 4;
+const left = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+AprsKissPanel.prototype._renderThursday = function renderThursday(main) {
+  const t = this._t;
+  main.classList.add('scroll');
+  main.innerHTML = `
+    <div class="card"><div class="th-state"></div><div class="hint">${t.thAbout}</div><div class="hint">${t.thRf}</div>
+      <div class="hint"><a href="https://aprs.to" target="_blank" rel="noreferrer">${t.thMap}</a></div></div>
+    <div class="row msgrow"><input class="text th-text" maxlength="55" placeholder="${t.thPh}">
+      <div class="seg" role="group" title="${t.viaTitle}">
+        <button type="button" data-via="radio" class="${this._via() === 'radio' ? 'on' : ''}">📻</button><button type="button" data-via="both" class="${this._via() === 'both' ? 'on' : ''}">📻+🌐</button><button type="button" data-via="internet" class="${this._via() === 'internet' ? 'on' : ''}">🌐</button></div>
+      <button class="btn th-send">${t.thSend}</button><button class="btn secondary th-leave">${t.thLeave}</button></div>
+    <div class="error">${esc(this._error)}</div>
+    <div class="chatlog th-log"></div>`;
+  main.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+    this._viaChoice = b.dataset.via;
+    main.querySelectorAll('.seg button').forEach((x) => x.classList.toggle('on', x === b));
+  }));
+  const send = async () => {
+    const input = main.querySelector('.th-text');
+    if (!input.value.trim()) return;
+    if (await this._ws({ type: 'aprs_kiss/thursday_send', text: input.value.trim(), via: this._via() })) {
+      input.value = '';
+      await this._loadExtra();
+      this._refreshTab();
+    }
+  };
+  main.querySelector('.th-send').addEventListener('click', send);
+  main.querySelector('.th-text').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+  main.querySelector('.th-leave').addEventListener('click', async () => {
+    if (await this._ws({ type: 'aprs_kiss/thursday_leave', via: this._via() })) { await this._loadExtra(); this._refreshTab(); }
+  });
+  this._refreshTab = () => {
+    const x = this._extra || {};
+    const st = main.querySelector('.th-state');
+    if (!st) return;
+    const parts = [thursdayNow() ? `<b class="ok">${t.thRunning}</b>` : t.thNext];
+    parts.push(x.thursday_member_until ? `${t.thMember} ${new Date(x.thursday_member_until * 1000).toLocaleString()}` : t.thNotMember);
+    if (x.thursday_wait) parts.push(`${t.thWait} ${left(x.thursday_wait)}`);
+    st.innerHTML = parts.join(' · ');
+    const log = main.querySelector('.th-log');
+    const items = x.thursday || [];
+    log.innerHTML = items.length ? items.map((e) => `<div class="chatline ${e.kind === 'out' || e.kind === 'leave' ? 'out' : ''}"><span class="t">${time(e.time)}</span>
+      <span class="c">${esc(e.from)}:</span>${e.kind === 'server' ? '<i>' + esc(e.text) + '</i>' : esc(e.text)}${e.via === 'internet' ? ' 🌐' : ''}</div>`).join('') : `<div class="hint">${t.thEmpty}</div>`;
+    log.scrollTop = log.scrollHeight;
+  };
+  this._refreshTab();
+};
+
+// ─── BBS SERVER ───────────────────────────────────────────────────────────
+
+AprsKissPanel.prototype._renderBbs = async function renderBbs(main) {
+  const t = this._t;
+  main.classList.add('scroll');
+  main.innerHTML = '<div class="hint">…</div>';
+  const b = await this._ws({ type: 'aprs_kiss/bbs' });
+  if (!b) { main.innerHTML = `<div class="error">${esc(this._error)}</div>`; return; }
+  const st = b.settings || {};
+  main.innerHTML = `${this._exclusiveBanner('bbs')}
+    <div class="hint">${b.error ? `<span class="error">${esc(b.error)}</span>` : `<span class="ok">${t.bbsRunning} ${esc(b.call || '')}</span>`}
+      ${this._state.tx_enabled ? '' : ` · <span class="warn">${t.bbsTxNeeded}</span>`}</div>
+    <div class="cols">
+      <div class="card"><h2>${t.bbsConnected}</h2>${b.conns.length ? b.conns.map((c) => `<div class="list-row">${esc(c.remote)} <small>(${c.minutes} min)</small></div>`).join('') : `<div class="hint">${t.bbsNobody}</div>`}
+        <h2 style="margin-top:12px">${t.bbsLog}</h2><div class="mono">${b.log.map(([tm, line]) => `${time(tm)}  ${esc(line)}`).join('\n')}</div></div>
+      <div class="card"><h2>${t.bbsMessages}</h2>${b.messages.length ? b.messages.map((m) => `<div class="list-row"><div class="grow open" data-n="${m.number}" style="cursor:pointer">
+          <span style="${m.read ? '' : 'font-weight:700'}">#${m.number} ${esc(m.kind)} ${esc(m.subject)}</span><small>${esc(m.from)} → ${esc(m.to)} · ${time(m.date)} · ${m.size} B</small></div>
+          <button class="btn secondary del" data-n="${m.number}">${t.bbsDelete}</button></div>`).join('') : `<div class="hint">${t.bbsNoMessages}</div>`}</div>
+    </div>
+    <div class="card"><h2>${t.bbsSettings}</h2>
+      ${st.error ? `<div class="error">${esc(st.error)}</div>` : ''}
+      <div class="form" style="overflow:visible">
+        <label class="field">${t.bbsSessions}<input type="number" min="1" class="b-max_sessions" value="${st.max_sessions ?? 2}"></label>
+        <label class="field">${t.bbsIdle}<input type="number" min="10" class="b-idle_timeout_sec" value="${st.idle_timeout_sec ?? 600}"></label>
+        <label class="field">${t.bbsTx}<input type="number" min="0" class="b-max_tx_min" value="${st.max_tx_min ?? 10}"></label>
+        <label class="field">${t.bbsMax}<input type="number" min="0" class="b-max_messages" value="${st.max_messages ?? 500}"></label>
+      </div>
+      <label class="field">${t.bbsWelcome}<textarea rows="7" class="b-welcome">${esc(b.welcome || '')}</textarea></label>
+      <div class="hint">${t.bbsMore} <code>${esc(b.folder)}</code></div>
+      <div class="row"><button class="btn b-save">${t.save}</button><button class="btn secondary b-reload">${t.bbsReload}</button><span class="b-msg"></span></div>
+    </div>`;
+  main.querySelector('.banner .off').addEventListener('click', () => this._setMode(''));
+  main.querySelectorAll('.del').forEach((x) => x.addEventListener('click', async () => {
+    await this._ws({ type: 'aprs_kiss/bbs_delete', number: Number(x.dataset.n) });
+    this._renderBbs(main);
+  }));
+  main.querySelectorAll('.open').forEach((x) => x.addEventListener('click', () => {
+    const m = b.messages.find((y) => y.number === Number(x.dataset.n));
+    this._dialog(`<h3>#${m.number} ${esc(m.subject)}</h3><small class="hint">${esc(m.from)} → ${esc(m.to)}${m.at ? ' @ ' + esc(m.at) : ''} · ${time(m.date)}</small>
+      <div class="mono" style="max-height:60vh;overflow:auto">${esc(m.body)}</div><div class="row" style="justify-content:flex-end"><button class="btn secondary close">OK</button></div>`,
+    (d, close) => d.querySelector('.close').addEventListener('click', close));
+  }));
+  main.querySelector('.b-save').addEventListener('click', async () => {
+    const settings = {};
+    for (const k of ['max_sessions', 'idle_timeout_sec', 'max_tx_min', 'max_messages']) settings[k] = Number(main.querySelector(`.b-${k}`).value);
+    const r = await this._ws({ type: 'aprs_kiss/bbs_settings', settings, welcome: main.querySelector('.b-welcome').value });
+    main.querySelector('.b-msg').innerHTML = r ? `<span class="ok">${t.saved.split(';')[0]}</span>` : `<span class="error">${esc(this._error)}</span>`;
+  });
+  main.querySelector('.b-reload').addEventListener('click', async () => {
+    const r = await this._ws({ type: 'aprs_kiss/bbs_reload' });
+    if (r) this._renderBbs(main);
+  });
+  this._refreshTab = () => { if (!main.querySelector('input:focus, textarea:focus')) this._renderBbs(main); };
+};
+
+// ─── TAK ──────────────────────────────────────────────────────────────────
+
+AprsKissPanel.prototype._renderTak = function renderTak(main) {
+  const t = this._t;
+  main.classList.add('scroll');
+  main.innerHTML = `${this._exclusiveBanner('tak')}
+    <div class="row"><span class="tak-state hint"></span><button class="btn tak-pos">${t.takSendPos}</button></div>
+    <div class="error">${esc(this._error)}</div>
+    <div class="cols">
+      <div class="card"><h2>${t.takStations}</h2><div class="tak-st"></div></div>
+      <div class="card"><h2>${t.takChat}</h2><div class="chatlog tak-log" style="min-height:160px"></div>
+        <div class="row" style="margin-top:8px"><select class="tak-to"></select><input class="tak-text" style="flex:1" placeholder="${t.chatPh}">
+        <button class="btn tak-send">${t.send}</button></div></div>
+    </div>`;
+  main.querySelector('.banner .off').addEventListener('click', () => this._setMode(''));
+  main.querySelector('.tak-pos').addEventListener('click', () => this._ws({ type: 'aprs_kiss/tak_position' }));
+  const send = async () => {
+    const input = main.querySelector('.tak-text');
+    const sel = main.querySelector('.tak-to');
+    if (!input.value.trim()) return;
+    const opt = sel.selectedOptions[0];
+    if (await this._ws({ type: 'aprs_kiss/tak_chat', text: input.value.trim(), to_uid: sel.value, to_callsign: sel.value ? opt.textContent : '' })) {
+      input.value = '';
+      await this._loadExtra();
+      this._refreshTab();
+    }
+  };
+  main.querySelector('.tak-send').addEventListener('click', send);
+  main.querySelector('.tak-text').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+  this._refreshTab = () => {
+    const tak = this._extra?.tak || { stations: [], chat: [] };
+    const now = Date.now() / 1000;
+    main.querySelector('.tak-state').textContent = `${t.takRunning} ${tak.callsign || ''}`;
+    main.querySelector('.tak-st').innerHTML = tak.stations.length ? tak.stations.map((s) => `<div class="list-row"><div class="grow"><b>${esc(s.callsign)}</b> <small>${esc(s.team || '')} · ${esc(s.role || '')} · ${Math.round((now - s.received) / 60)} min · ${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}${s.battery ? ' · 🔋' + s.battery + ' %' : ''}</small></div></div>`).join('') : `<div class="hint">${t.takNoStations}</div>`;
+    const sel = main.querySelector('.tak-to');
+    const keep = sel.value;
+    sel.innerHTML = `<option value="">${t.takEverybody}</option>` + tak.stations.map((s) => `<option value="${esc(s.uid)}" ${s.uid === keep ? 'selected' : ''}>${esc(s.callsign)}</option>`).join('');
+    const log = main.querySelector('.tak-log');
+    log.innerHTML = tak.chat.length ? tak.chat.map((c) => `<div class="chatline ${c.out ? 'out' : ''}"><span class="t">${time(c.time)}</span><span class="c">${esc(c.from)}:</span>${c.to && c.to !== 'All' && c.to !== 'All Chat Rooms' ? `<span class="to">→ ${esc(c.to_callsign || c.to)}</span>` : ''}${esc(c.text)}</div>`).join('') : `<div class="hint">${t.takNoChat}</div>`;
+    log.scrollTop = log.scrollHeight;
+  };
+  this._refreshTab();
 };
 
 if (!customElements.get('aprs-kiss-panel')) customElements.define('aprs-kiss-panel', AprsKissPanel);

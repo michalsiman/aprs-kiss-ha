@@ -1,4 +1,4 @@
-"""APRS packet parsing with aprslib, made safe for Home Assistant events."""
+"""APRS packet parsing with aprslib, as plain dicts."""
 
 from __future__ import annotations
 

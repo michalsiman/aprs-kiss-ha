@@ -1,4 +1,4 @@
-"""KISS framing and AX.25 UI frames (pure Python, no Home Assistant imports).
+"""KISS framing and AX.25 UI frames (pure Python).
 
 KISS (http://www.ax25.net/kiss.aspx): frames are delimited by FEND; FEND and
 FESC inside a frame are escaped. The first byte of a frame is the port (high

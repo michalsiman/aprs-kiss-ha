@@ -16,10 +16,11 @@ from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, Supp
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
-from .aprsis import licence_confirmed
+from .core.aprsis import licence_confirmed
 from .const import CONF_APRSIS, CONF_LICENCE, DOMAIN, PANEL_STATIC, PANEL_URL
+from . import maps, panel_api
 from .hub import Hub
-from .station import TransmitRefused
+from .core.station import TransmitRefused
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,6 +41,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: AprsKissConfigEntry) -> 
         bucket["registered"] = True
         _register_services(hass)
         _register_ws(hass)
+        panel_api.register(hass, _hub)
+        bucket["maps"] = maps.register(hass)
         await _register_panel(hass)
     return True
 
@@ -81,13 +84,12 @@ def _register_services(hass: HomeAssistant) -> None:
 
     async def send_position(call: ServiceCall) -> None:
         hub = _hub(hass, call.data.get("config_entry_id"))
-        lat = call.data.get("latitude", hass.config.latitude)
-        lon = call.data.get("longitude", hass.config.longitude)
-        await _guard(hub.station.send_position(lat, lon, call.data.get("comment")))
+        # without a position: home, or the USB GPS when it has a fix
+        await _guard(hub.send_position(call.data.get("latitude"), call.data.get("longitude"), call.data.get("comment")))
 
     async def send_status(call: ServiceCall) -> None:
         hub = _hub(hass, call.data.get("config_entry_id"))
-        await _guard(hub.station.send_status(call.data["text"]))
+        await _guard(hub.send_status(call.data["text"]))
 
     async def send_unproto(call: ServiceCall) -> None:
         hub = _hub(hass, call.data.get("config_entry_id"))
@@ -213,6 +215,10 @@ SETTINGS_KEYS = {
     "beacon_is": bool, "tracked_callsigns": str, "accept_incoming": bool, "txdelay_ms": int,
     "aprsis_enabled": bool, "aprsis_host": str, "aprsis_port": int, "aprsis_passcode": str,
     "aprsis_radius_km": int, "igate_rx": bool, "igate_tx": bool,
+    # from the shared engine: digipeater, USB GPS, BBS SERVER's SSID, TAK
+    "digi_mode": str, "digi_max_hops": int, "digi_aliases": str,
+    "gps_source": str, "gps_device": str, "gps_baudrate": int,
+    "bbs_ssid": int, "tak_callsign": str, "tak_team": str, "tak_role": str, "tak_interval_min": int,
 }
 
 
@@ -222,7 +228,9 @@ SETTINGS_KEYS = {
 async def ws_get_settings(hass, connection, msg):
     hub = _hub(hass, msg.get("entry_id"))
     conf = {**hub.entry.data, **hub.entry.options}
-    out = {k: conf.get(k) for k in SETTINGS_KEYS}
+    out = {k: conf.get(k, getattr(hub.config, k, None)) for k in SETTINGS_KEYS}  # the engine's defaults
+    out["mode"] = hub.exclusive_mode
+    out["gps"] = hub.status().get("gps")
     out["aprsis_enabled"] = bool(conf.get(CONF_APRSIS) and conf.get(CONF_LICENCE))
     out["aprsis"] = {
         "connected": bool(hub.aprsis and hub.aprsis.connected),
@@ -242,7 +250,7 @@ async def ws_get_settings(hass, connection, msg):
 @websocket_api.require_admin
 @websocket_api.async_response
 async def ws_set_settings(hass, connection, msg):
-    from .ax25 import Address  # noqa: PLC0415
+    from .core.ax25 import Address  # noqa: PLC0415
 
     hub = _hub(hass, msg.get("entry_id"))
     entry = hub.entry
@@ -262,6 +270,12 @@ async def ws_set_settings(hass, connection, msg):
             raise ValueError("The symbol is two characters: table and code")
         if new.get("aprsis_passcode") and not str(new["aprsis_passcode"]).lstrip("-").isdigit():
             raise ValueError("The passcode is a number")
+        if new.get("digi_mode", "off") not in ("off", "fillin", "wide"):
+            raise ValueError("digi_mode")
+        if new.get("gps_source", "manual") not in ("manual", "usb"):
+            raise ValueError("gps_source")
+        if new.get("gps_source") == "usb" and not new.get("gps_device"):
+            raise ValueError("gps_device")
         from .ports import connection_update  # noqa: PLC0415
 
         tnc = connection_update(msg["settings"])

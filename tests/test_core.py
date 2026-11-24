@@ -4,6 +4,7 @@ Run: python3 -m unittest discover -s tests -t .
 """
 
 import asyncio
+import importlib
 import importlib.util
 import pathlib
 import sys
@@ -14,9 +15,13 @@ ROOT = pathlib.Path(__file__).resolve().parents[1] / "custom_components" / "aprs
 
 
 def _load(name):
-    """Import a module of the integration without running its __init__ (which needs HA)."""
+    """Import a module of the integration without running its __init__ (which needs HA).
+
+    "ports" is the integration's own; everything else is the shared core (core/, from the app)."""
     pkg = sys.modules.setdefault("aprs_kiss", types.ModuleType("aprs_kiss"))
     pkg.__path__ = [str(ROOT)]
+    if name != "ports":
+        return importlib.import_module(f"aprs_kiss.core.{name}")
     spec = importlib.util.spec_from_file_location(f"aprs_kiss.{name}", ROOT / f"{name}.py")
     mod = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = mod

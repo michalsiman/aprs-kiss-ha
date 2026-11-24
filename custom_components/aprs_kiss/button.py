@@ -6,7 +6,7 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.exceptions import HomeAssistantError
 
 from .entity import AprsKissEntity
-from .station import TransmitRefused
+from .core.station import TransmitRefused
 
 
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
@@ -18,6 +18,6 @@ class BeaconButton(AprsKissEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         try:
-            await self.hub.station.send_position(self.hass.config.latitude, self.hass.config.longitude)
+            await self.hub.send_position()  # home, or the USB GPS when it has a fix
         except (TransmitRefused, ConnectionError) as err:
             raise HomeAssistantError(f"Not sent: {err}") from err
