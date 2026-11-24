@@ -68,6 +68,9 @@ class Session:
         self._peer_busy = False
         self._rx_partial = ""
         self.connected_at: float | None = None
+        # binary use (a file transfer): when set, received data goes here as bytes instead of text
+        self.on_data: Callable[[bytes], None] | None = None
+        self.acked_bytes = 0  # data the other side has acknowledged (progress of a transfer)
         self._loop = asyncio.get_event_loop()
 
     # ─── frames ───────────────────────────────────────────────────────────
@@ -177,6 +180,14 @@ class Session:
             self._queue.append(data[i:i + PACLEN])
         self._pump()
 
+    def send_bytes(self, data: bytes) -> None:
+        """Queue data as it is (a file transfer)."""
+        if self.state != CONNECTED:
+            raise ConnectionError("Not connected")
+        for i in range(0, len(data), PACLEN):
+            self._queue.append(data[i:i + PACLEN])
+        self._pump()
+
     def _pump(self) -> None:
         while self._queue and not self._peer_busy and (self.vs - self.va) % 8 < WINDOW:
             info = self._queue.pop(0)
@@ -241,7 +252,7 @@ class Session:
     def _acknowledge(self, nr: int, retransmit: bool) -> None:
         # Frames va … nr-1 are acknowledged.
         while self.va != nr and self.va in self._unacked:
-            del self._unacked[self.va]
+            self.acked_bytes += len(self._unacked.pop(self.va))
             self.va = (self.va + 1) % 8
             self._retries = 0
         if not self._unacked:
@@ -276,6 +287,9 @@ class Session:
             self._send(S_RR | (self.vr << 5), command=False)
 
     def _deliver(self, data: bytes) -> None:
+        if self.on_data:
+            self.on_data(data)
+            return
         text = data.decode("utf-8", "replace").replace("\r\n", "\n").replace("\r", "\n")
         if text:
             self._on_text(text)

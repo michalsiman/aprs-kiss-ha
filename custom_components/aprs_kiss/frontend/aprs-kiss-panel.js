@@ -143,6 +143,11 @@ Object.assign(TEXTS.cs, {
 });
 
 /** APRS weather (aprslib units: °C, m/s, mm, hPa, %) as a short line. */
+// Spot and Services in the APRS tab: the same texts as the app (aprs-kiss-app i18n)
+TEXTS.en.app = {"spot_button": "Spot", "spot_title": "Self-spot an activation (SOTA, POTA, WWFF, GMA…)", "spot_program": "Program", "spot_gateway": "Gateway", "spot_ref": "Reference", "spot_freq": "Frequency (MHz)", "spot_mode": "Mode", "spot_comment": "Comment (optional)", "spot_test": "Test only", "spot_hint_aprs2sota": "APRS2SOTA posts the spot on SOTAwatch. Register your callsign with its operator first (sotaspots.co.uk). The answer (Spotted / Error) comes as a message in its conversation. A test spot is posted marked as TEST.", "spot_hint_apspot": "APSPOT posts the spot on pota.app, SOTAwatch or ParksnPeaks; you need an account there. The answer comes as a message in its conversation. A test spot is only answered, not posted.", "spot_hint_camilla": "Camilla (DL0QW-12, gma.rocks) posts the spot on GMA, and a SOTA summit on SOTAwatch too: summits, castles (WCA), WWFF, islands (IOTA), lighthouses. For registered GMA users only (free at gma.rocks). It answers with a message in its conversation. A test spot is posted marked as TEST.", "spot_send": "Send spot", "spot_bad_ref": "The reference does not look right, e.g. {example}", "spot_bad_freq": "Frequency in MHz, e.g. 7.032 or 145.500", "spot_bad_program": "Pick a program", "spot_lighthouse": "Lighthouse", "services_button": "Services", "services_title": "Services on APRS", "services_hint": "Each one answers a message: pick a command, it goes to the message field, send it. The answer comes back in that conversation.", "svc_type": "Type…", "svc_find": "Where a station was last heard: send its callsign. Answers the time, the iGate, the distance and the locator.", "svc_repeat": "Repeaters nearest to your last position beacon.", "svc_wxnow": "Weather from the weather station nearest to you.", "svc_utc": "The exact time (UTC).", "svc_sat": "Satellite passes over you (satpass iss, satpass so-50), sunrise and sunset, where you are.", "svc_mail": "E-mail from the radio: EMAIL address text, as many messages as needed, then SEND. 5 an hour."};
+TEXTS.cs.app = {"spot_button": "Spot", "spot_title": "Ohlásit aktivaci (SOTA, POTA, WWFF, GMA…)", "spot_program": "Program", "spot_gateway": "Brána", "spot_ref": "Reference", "spot_freq": "Kmitočet (MHz)", "spot_mode": "Druh provozu", "spot_comment": "Poznámka (nepovinná)", "spot_test": "Jen zkouška", "spot_hint_aprs2sota": "APRS2SOTA vystaví spot na SOTAwatch. Značku je potřeba nejdřív zaregistrovat u jejího provozovatele (sotaspots.co.uk). Odpověď (Spotted / Error) přijde jako zpráva v její konverzaci. Zkušební spot se vystaví označený jako TEST.", "spot_hint_apspot": "APSPOT vystaví spot na pota.app, SOTAwatch nebo ParksnPeaks; je potřeba tam mít účet. Odpověď přijde jako zpráva v její konverzaci. Na zkušební spot jen odpoví, nic nevystaví.", "spot_hint_camilla": "Camilla (DL0QW-12, gma.rocks) vystaví spot na GMA a SOTA vrchol i na SOTAwatch: vrcholy, hrady (WCA), WWFF, ostrovy (IOTA), majáky. Jen pro registrované uživatele GMA (zdarma na gma.rocks). Odpoví zprávou v její konverzaci. Zkušební spot se vystaví označený jako TEST.", "spot_send": "Odeslat spot", "spot_bad_ref": "Reference nevypadá správně, např. {example}", "spot_bad_freq": "Kmitočet v MHz, např. 7.032 nebo 145.500", "spot_bad_program": "Vyber program", "spot_lighthouse": "Maják", "services_button": "Služby", "services_title": "Služby na APRS", "services_hint": "Každá odpoví na zprávu: vyber příkaz, vloží se do pole zprávy, pošli ho. Odpověď přijde do té konverzace.", "svc_type": "Napsat…", "svc_find": "Kde byla stanice naposledy slyšet: pošli její značku. Odpoví čas, iGate, vzdálenost a lokátor.", "svc_repeat": "Převaděče nejblíž tvé poslední poloze.", "svc_wxnow": "Počasí z meteostanice nejblíž tobě.", "svc_utc": "Přesný čas (UTC).", "svc_sat": "Přelety satelitů nad tebou (satpass iss, satpass so-50), východ a západ slunce, kde jsi.", "svc_mail": "E-mail z rádia: EMAIL adresa text, klidně víc zpráv, nakonec SEND. 5 za hodinu."};
+const fill = (text, values) => text.replace(/\{(\w+)\}/g, (m, k) => (values[k] ?? m));
+
 const wxText = (w) => {
   if (!w) return '';
   const parts = [];
@@ -427,6 +432,11 @@ class AprsKissPanel extends HTMLElement {
         pre .tx { color: var(--primary-color); } pre .st { color: var(--warning-color, #ef6c00); font-style: italic; } pre .out { color: var(--success-color, #2e7d32); }
         .line { display: flex; gap: 8px; } .line input { flex: 1; font-family: ui-monospace, monospace; }
         .hint { font-size: 13px; color: var(--secondary-text-color); }
+        .tool { display: flex; flex-direction: column; gap: 10px; } .tool h2 { margin: 0; }
+        .tool label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--secondary-text-color); }
+        .tool label.check { flex-direction: row; align-items: center; } .tool label.grow { flex: 1; } .tool label.grow input { width: 100%; box-sizing: border-box; }
+        .tool .svc { display: flex; flex-direction: column; gap: 4px; } .tool .svc .row { gap: 6px; }
+        .mono { font-family: ui-monospace, 'DejaVu Sans Mono', Menlo, Consolas, monospace; font-size: 13px; word-break: break-word; }
         .error { color: var(--error-color, #db4437); font-size: 13px; }
         .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1; min-height: 0; }
         @media (max-width: 800px) { .cols { grid-template-columns: 1fr; } }
@@ -979,6 +989,11 @@ class AprsKissPanel extends HTMLElement {
         <input class="text" maxlength="67" placeholder="${t.message}">
         <button class="btn sendmsg">${t.send}</button>
       </div>
+      <div class="row tools">
+        <button class="btn secondary spotbtn" title="${esc(t.app.spot_title)}">⛰ ${esc(t.app.spot_button)}</button>
+        <button class="btn secondary svcbtn" title="${esc(t.app.services_title)}">🛰 ${esc(t.app.services_button)}</button>
+      </div>
+      <div class="card tool" hidden></div>
       <div class="error">${esc(this._error)}</div>
       <div class="card"><h2>${t.map}</h2><div class="map"></div></div>
       <div class="cols">
@@ -1010,6 +1025,139 @@ class AprsKissPanel extends HTMLElement {
     this._renderMap(main.querySelector('.map'));
     main.querySelector('.sendmsg').addEventListener('click', send);
     main.querySelector('.text').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+    main.querySelector('.spotbtn').addEventListener('click', () => this._toggleTool(main, 'spot'));
+    main.querySelector('.svcbtn').addEventListener('click', () => this._toggleTool(main, 'services'));
+    if (this._tool) this._toggleTool(main, this._tool, true);
+  }
+
+  // ─── Spot and Services (the same tables and checks as the app: core/spotting.py, core/services.py) ──
+
+  async _toggleTool(main, which, keep = false) {
+    const box = main.querySelector('.tool');
+    if (!keep && this._tool === which && !box.hidden) {
+      this._tool = null;
+      box.hidden = true;
+      return;
+    }
+    this._tool = which;
+    box.hidden = false;
+    if (!this._spotOpts) {
+      try {
+        this._spotOpts = await this._hass.callWS({ type: 'aprs_kiss/spot_options' });
+      } catch (e) {
+        box.innerHTML = `<div class="error">${esc(e.message || e)}</div>`;
+        return;
+      }
+    }
+    if (which === 'spot') this._renderSpot(main, box); else this._renderServices(main, box);
+  }
+
+  _renderServices(main, box) {
+    const a = this._t.app;
+    box.innerHTML = `<h2>${esc(a.services_title)}</h2><div class="hint">${esc(a.services_hint)}</div>
+      ${this._spotOpts.services.map((s) => `<div class="svc"><b class="mono">${esc(s.call)}</b>
+        <div class="hint">${esc(a[s.key] || '')}</div>
+        <div class="row">${s.commands.map((c) => `<button class="btn secondary svccmd" data-call="${esc(s.call)}" data-cmd="${esc(c)}">${esc(c.trim() || a.svc_type)}</button>`).join('')}</div></div>`).join('')}`;
+    box.querySelectorAll('.svccmd').forEach((b) => b.addEventListener('click', () => {
+      main.querySelector('.to').value = b.dataset.call;
+      this._msgTo = b.dataset.call;
+      const text = main.querySelector('.text');
+      text.value = b.dataset.cmd;
+      text.focus();
+      text.setSelectionRange(text.value.length, text.value.length);
+    }));
+  }
+
+  _renderSpot(main, box) {
+    const a = this._t.app;
+    const o = this._spotOpts;
+    let last = {};
+    try { last = JSON.parse(localStorage.getItem('aprs_kiss_spot') || '{}'); } catch (e) { last = {}; }
+    const opt = (value, text, sel) => `<option value="${esc(value)}"${value === sel ? ' selected' : ''}>${esc(text)}</option>`;
+    box.innerHTML = `<h2>${esc(a.spot_title)}</h2>
+      <div class="row">
+        <label>${esc(a.spot_program)}<select class="sp-program">${o.programs.map((p) => opt(p, p === 'LH' ? a.spot_lighthouse : p, last.program || 'SOTA')).join('')}</select></label>
+        <label>${esc(a.spot_gateway)}<select class="sp-gateway"></select></label>
+      </div>
+      <div class="row">
+        <label>${esc(a.spot_ref)}<input class="sp-ref call" value="${esc(last.reference || '')}"></label>
+        <label>${esc(a.spot_freq)}<input class="sp-freq" inputmode="decimal" value="${esc(last.frequency || '')}"></label>
+        <label>${esc(a.spot_mode)}<select class="sp-mode"></select></label>
+      </div>
+      <div class="row"><label class="grow">${esc(a.spot_comment)}<input class="sp-comment"></label></div>
+      <label class="check"><input type="checkbox" class="sp-test"> ${esc(a.spot_test)}</label>
+      <div class="hint sp-hint"></div>
+      <div class="mono sp-preview"></div>
+      <div class="error sp-error"></div>
+      <div class="row"><button class="btn sp-send">${esc(a.spot_send)}</button></div>`;
+    const $ = (c) => box.querySelector(c);
+    const hints = { APRS2SOTA: a.spot_hint_aprs2sota, APSPOT: a.spot_hint_apspot };
+    hints[o.camilla] = a.spot_hint_camilla;
+    let built = null;
+    const spot = () => ({ program: $('.sp-program').value, gateway: $('.sp-gateway').value, reference: $('.sp-ref').value,
+      frequency: $('.sp-freq').value, mode: $('.sp-mode').value, comment: $('.sp-comment').value, test: $('.sp-test').checked });
+    const preview = async () => {
+      built = null;
+      const s = spot();
+      try {
+        const r = await this._hass.callWS({ type: 'aprs_kiss/spot_build', ...s, entry_id: this._state.entry_id });
+        if (r.error) {
+          $('.sp-preview').textContent = '';
+          $('.sp-error').textContent = (s.reference || s.frequency) ? fill(a[r.error] || r.error, { example: r.example }) : '';
+        } else {
+          built = r;
+          $('.sp-preview').textContent = `→ ${r.to}: ${r.text}`;
+          $('.sp-error').textContent = '';
+        }
+      } catch (e) { $('.sp-error').textContent = e.message || String(e); }
+    };
+    const gatewayChanged = (keepMode) => {
+      const g = $('.sp-gateway').value;
+      const modes = o.modes[g] || [];
+      const want = keepMode || $('.sp-mode').value;
+      $('.sp-mode').innerHTML = modes.map((m) => opt(m, m, modes.includes(want) ? want : 'SSB')).join('');
+      $('.sp-hint').textContent = hints[g] || '';
+      preview();
+    };
+    const programChanged = (keepGateway, keepMode) => {
+      const gws = o.gateways[$('.sp-program').value] || [];
+      const sel = gws.includes(keepGateway) ? keepGateway : gws[0];
+      $('.sp-gateway').innerHTML = gws.map((g) => opt(g, o.gateway_names[g] || g, sel)).join('');
+      gatewayChanged(keepMode);
+    };
+    $('.sp-program').addEventListener('change', () => programChanged('', $('.sp-mode').value));
+    $('.sp-gateway').addEventListener('change', () => gatewayChanged());
+    $('.sp-mode').addEventListener('change', preview);
+    $('.sp-test').addEventListener('change', preview);
+    let timer;
+    ['.sp-ref', '.sp-freq', '.sp-comment'].forEach((c) => $(c).addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(preview, 250);
+    }));
+    $('.sp-send').addEventListener('click', async () => {
+      await preview();
+      if (!built) {
+        if (!$('.sp-error').textContent) $('.sp-error').textContent = fill(a.spot_bad_ref, { example: o.examples[$('.sp-program').value] || '' });
+        return;
+      }
+      try {
+        // by radio over APRS: an iGate in range takes it to the gateway (the message's own radio/internet choice)
+        await this._hass.callWS({ type: 'aprs_kiss/send_message', to: built.to, text: built.text, via: this._via(),
+          entry_id: this._state.entry_id });
+        const s = spot();
+        localStorage.setItem('aprs_kiss_spot', JSON.stringify({ program: s.program, gateway: s.gateway,
+          reference: s.reference, frequency: s.frequency, mode: s.mode }));
+        main.querySelector('.to').value = built.to;
+        this._msgTo = built.to;
+        this._tool = null;
+        box.hidden = true;
+        await this._loadStatus();
+      } catch (e) {
+        const m = e.message || String(e);
+        $('.sp-error').textContent = /Transmitting is switched off/.test(m) ? this._t.errTxOff : /APRS-IS is not connected/.test(m) ? this._t.errIsOff : m;
+      }
+    });
+    programChanged(last.gateway || '', last.mode || 'SSB');
   }
 
   // New data on the APRS tab: only the lists and the map markers change, so the map

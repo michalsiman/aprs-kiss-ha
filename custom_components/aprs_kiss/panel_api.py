@@ -18,6 +18,9 @@ from homeassistant.core import HomeAssistant
 
 from .core.bbs import BbsConfigError
 from .core.bbs.storage import load_settings, prepare_folder, read_text, update_settings, write_text
+from .core.services import SERVICES
+from .core.spotting import (CAMILLA, GATEWAY_NAMES, MODES, PROGRAM_GATEWAYS, PROGRAMS, REFERENCE, Spot, SpotError,
+                            build as build_spot)
 from .core.station import TransmitRefused
 
 # The safety sentences, as the panel shows them (case, accents and spaces do not matter).
@@ -220,6 +223,43 @@ def register(hass: HomeAssistant, hub_of) -> None:
         except (TransmitRefused, ConnectionError, ValueError) as err:
             error(connection, msg["id"], err)
 
+    # ─── self-spotting an activation, and the services that answer a message ─
+
+    @websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/spot_options"})
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_spot_options(hass, connection, msg):
+        """What the Spot dialog offers (the same tables the app uses), and the services list."""
+        connection.send_result(msg["id"], {
+            "programs": list(PROGRAMS),
+            "gateways": {p: list(g) for p, g in PROGRAM_GATEWAYS.items()},
+            "gateway_names": GATEWAY_NAMES,
+            "modes": {g: list(m) for g, m in MODES.items()},
+            "examples": {p: example for p, (_pattern, example) in REFERENCE.items()},
+            "camilla": CAMILLA,
+            "services": [{"call": s.call, "key": s.key, "commands": list(s.commands)} for s in SERVICES],
+        })
+
+    @websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/spot_build", vol.Required("program"): str,
+                                      vol.Optional("reference", default=""): str,
+                                      vol.Optional("frequency", default=""): str,
+                                      vol.Optional("mode", default=""): str, vol.Optional("comment", default=""): str,
+                                      vol.Optional("gateway", default=""): str, vol.Optional("test", default=False): bool,
+                                      vol.Optional("entry_id"): str})
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_spot_build(hass, connection, msg):
+        """The message a spot makes (addressee and text), or why it cannot go; sending is send_message."""
+        hub = hub_of(hass, msg.get("entry_id"))
+        spot = Spot(msg["program"], msg["reference"], msg["frequency"], msg["mode"], msg["comment"], msg["gateway"],
+                    msg["test"])
+        try:
+            to, text = build_spot(spot, str(hub.me))
+            connection.send_result(msg["id"], {"to": to, "text": text})
+        except SpotError as err:
+            connection.send_result(msg["id"], {"error": err.code, "example": err.example})
+
     for handler in (ws_extra, ws_set_mode, ws_bbs, ws_bbs_delete, ws_bbs_settings, ws_bbs_reload,
-                    ws_tak_position, ws_tak_chat, ws_thursday_send, ws_thursday_leave):
+                    ws_tak_position, ws_tak_chat, ws_thursday_send, ws_thursday_leave, ws_spot_options,
+                    ws_spot_build):
         websocket_api.async_register_command(hass, handler)

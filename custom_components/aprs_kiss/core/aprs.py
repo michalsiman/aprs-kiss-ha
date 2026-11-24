@@ -86,3 +86,28 @@ def position(lat: float, lon: float, symbol: str = "/-", comment: str = "", mess
 def message_id(counter: int) -> str:
     """Message number, 1–5 alphanumeric characters (APRS 1.0: up to 5)."""
     return str(counter % 100000)
+
+
+MAX_MESSAGE_PARTS = 5
+
+
+def message_parts(text: str, limit: int = MAX_MESSAGE_TEXT, max_parts: int = MAX_MESSAGE_PARTS) -> list[str]:
+    """A text longer than one APRS message as several, each ending " 1/3", " 2/3", … (split between
+    words where it can). A short text is one message, as it is. Too long: cut after max_parts."""
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return [text] if text else []
+    for n in range(2, max_parts + 1):
+        room = limit - len(f" {n}/{n}")
+        parts, rest = [], text
+        while rest and len(parts) < n:
+            if len(rest) <= room:
+                cut = len(rest)
+            else:
+                gap = rest.rfind(" ", 0, room + 1)
+                cut = gap if gap > room // 2 else room
+            parts.append(rest[:cut].strip())
+            rest = rest[cut:].strip()
+        if not rest or n == max_parts:
+            return [f"{p} {i}/{len(parts)}" for i, p in enumerate(parts, 1)]
+    return []

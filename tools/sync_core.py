@@ -19,7 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parents[1]
 TARGET = HERE / "custom_components" / "aprs_kiss" / "core"
 FRONTEND = HERE / "custom_components" / "aprs_kiss" / "frontend"
-SKIP = {"android_bt.py", "android_usb.py", "__pycache__"}  # phones only
+SKIP = {"android_bt.py", "android_usb.py", "ble.py", "__pycache__"}  # phones and the app's Flet extension only
 
 
 def main() -> None:

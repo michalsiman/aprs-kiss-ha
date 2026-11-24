@@ -7,6 +7,9 @@
 - **Offline maps**: a basic map bundled (borders, motorways and roads, towns, peaks) and your own raster maps (MBTiles, PMTiles, RMaps, a ZIP of tiles, or a .zip/.7z of them) uploaded in Settings or copied into `/config/aprs_kiss/maps`. The map's layer button switches between online, your maps and the basic one.
 - **One switch "Send over the internet too"** (APRS-IS card): the position (button, regular) and messages go to APRS-IS as well; messages can still choose radio, both or internet.
 - **Digipeater** (fill-in or wide, aliases), **USB GPS** (NMEA) as our position, **#APRSThursday** tab, **BBS SERVER** and **TAK** modes (each instead of APRS, switched on with a safety sentence).
+- **Spot** (APRS tab): self-spotting a SOTA, POTA, WWFF, SIOTA, GMA, WCA, IOTA or lighthouse activation through APRS2SOTA, Camilla (DL0QW-12) or APSPOT, checked and shown before it goes – the same as in the app.
+- **Services** (APRS tab): FIND, REPEAT, WXNOW, UTC, satellite passes (9M2PJU-4) and e-mail (MAILMY), one click puts the command in the message line.
+- A serial TNC that is not there or does not answer is said plainly (not there, not answering, not allowed – the dialout group) instead of a bare "Could not configure port".
 
 ## [0.3.8] - 2026-11-22
 

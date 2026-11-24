@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import math
 import time
 from collections import deque
 from collections.abc import Callable
@@ -32,15 +33,15 @@ from . import thursday
 from .aprsis import AprsIsClient, gate_to_is, passcode, third_party
 from .ax25 import PF, U_DM, Address, Frame
 from .bbs import BbsConfigError, BbsServer
-from . import digipeater, tak
-from .tracker import Tracker, course_speed
+from . import digipeater, tak, yapp
+from .tracker import Tracker, course_speed, distance_m
 from .station import _track as station_track
 from . import vara as vara_mod
 from .gps import GpsFix, GpsReader, PushedGps
 from .config import MIN_BEACON_MINUTES, VERSION, Config, data_dir, load_state, save_state
 from .connection import KissConnection, TncSettings
 from .parser import parse
-from .session import CONNECT_ATTEMPTS, DISCONNECTED, Session
+from .session import CONNECT_ATTEMPTS, CONNECTED, DISCONNECTED, Session
 from .station import Station, StationConfig, TransmitRefused
 
 _LOGGER = logging.getLogger(__name__)
@@ -118,6 +119,10 @@ class Engine:
         self._thursday_recent: dict[str, float] = {}
         self._chat_recent: dict[str, float] = {}
         self.sessions: dict[str, Session] = {}
+        # file transfers (YAPP over a connected link): the newest last; who is sending or receiving now
+        self.transfers: deque[dict[str, Any]] = deque(maxlen=50)
+        self._yapp: dict[str, Any] = {}  # remote -> yapp.Sender or yapp.Receiver
+        self._offers: dict[str, Callable[[bool], None]] = {}
         self.igate_stats = {"rf_to_is": 0, "is_to_rf": 0, "is_messages": 0}
         self.digi_dedupe = digipeater.Dedupe()
         self.digipeated = 0
@@ -185,7 +190,7 @@ class Engine:
         conf = self.config
         self.me = Address.parse(conf.callsign or "NOCALL")
         bbs = bool((conf.bbs_enabled or conf.tak_enabled) and conf.configured)  # an exclusive mode
-        self.accept_incoming = conf.accept_incoming and not bbs
+        self.accept_incoming = (conf.accept_incoming or conf.files_accept) and not bbs
         self.igate_rx = conf.igate_rx and not bbs
         self.igate_tx = conf.igate_tx and not bbs
         self.connection = KissConnection(
@@ -856,10 +861,23 @@ class Engine:
             return
         item = {"direction": "in", "from": message["from"], "to": str(self.me), "text": message["text"],
                 "time": message["received_at"], "msg_no": message.get("msg_no"), "via": message.get("via")}
+        item.update(self._distance_to(message["from"]))  # how far the sender was when the message came
         self.messages.append(item)
         self._schedule_save()
         self._emit("message", message)
         self._emit("aprs_message", {"message": item})
+
+    def _distance_to(self, call: str) -> dict[str, float]:
+        """{"km": …, "bearing": …} from where we are to the station's last known position, or {}."""
+        here = self.my_position()
+        there = self.station.heard.get(call) or self.station.heard.get(call.upper()) or {}
+        if not here or there.get("latitude") is None or there.get("longitude") is None:
+            return {}
+        lat1, lon1, lat2, lon2 = map(math.radians, (*here, there["latitude"], there["longitude"]))
+        y = math.sin(lon2 - lon1) * math.cos(lat2)
+        x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(lon2 - lon1)
+        return {"km": round(distance_m(*here, there["latitude"], there["longitude"]) / 1000, 2),
+                "bearing": round(math.degrees(math.atan2(y, x)) % 360)}
 
     # ─── #APRSThursday ────────────────────────────────────────────────────
 
@@ -933,6 +951,21 @@ class Engine:
         self._emit("aprs_message", {"message": item})
         return msg.as_dict()
 
+    def delete_conversation(self, call: str) -> int:
+        """Forget all messages with this station (in and out); how many went."""
+        call = call.upper()
+
+        def party(m: dict[str, Any]) -> str:
+            return (m["from"] if m["direction"] == "in" else m["to"]).upper()
+
+        keep = [m for m in self.messages if party(m) != call]
+        gone = len(self.messages) - len(keep)
+        self.messages = deque(keep, maxlen=MESSAGE_HISTORY)
+        if gone:
+            self._schedule_save()
+            self._on_update()
+        return gone
+
     def message_state(self, msg_no: str | None) -> str | None:
         msg = self.station.outgoing.get(str(msg_no)) if msg_no else None
         return msg.state if msg else None
@@ -948,14 +981,151 @@ class Engine:
         def on_text(text: str) -> None:
             self._terminal(key, "rx", text)
 
+        def on_data(data: bytes) -> None:
+            """A file transfer once it starts (YAPP), otherwise text for the terminal."""
+            if key not in self._yapp and data[:2] == yapp.SI and self.config.files_accept:
+                self._start_receiving(key)
+            handler = self._yapp.get(key)
+            if handler is not None:
+                handler.feed(data)
+                return
+            text = data.decode("utf-8", "replace").replace("\r\n", "\n").replace("\r", "\n")
+            if text:
+                on_text(text)
+
         def on_state(state: str, reason: str) -> None:
-            self._terminal(key, "state", reason or state)
+            if key in self._yapp:
+                if state == CONNECTED:
+                    handler = self._yapp[key]
+                    if isinstance(handler, yapp.Sender) and handler.state == "new":
+                        handler.start()
+                elif state == DISCONNECTED:
+                    self._transfer_link_gone(key, reason)
+            else:
+                self._terminal(key, "state", reason or state)
             self._emit("state", {"remote": key, "state": state})
             self._on_update()
 
         sess = Session(self.me, remote, path, self.send_frame, on_text, on_state)
+        sess.on_data = on_data
         self.sessions[key] = sess
         return sess
+
+    # ─── files (YAPP over a connected link) ───────────────────────────────
+
+    def files_folder(self) -> Path:
+        return (self._folder or data_dir()) / "files"
+
+    def _transfer(self, key: str) -> dict[str, Any] | None:
+        for t in reversed(self.transfers):
+            if t["remote"] == key and t["state"] in ("connecting", "waiting", "offered", "sending", "receiving"):
+                return t
+        return None
+
+    def _transfer_update(self, key: str, **changes: Any) -> None:
+        t = self._transfer(key) or (self.transfers[-1] if self.transfers and self.transfers[-1]["remote"] == key else None)
+        if t is not None:
+            t.update(changes)
+            if changes.get("state") in ("done", "refused", "cancelled", "failed"):
+                t["ended"] = time.time()
+                self._yapp.pop(key, None)
+                self._offers.pop(key, None)
+        self._emit("files", {"remote": key})
+        self._on_update()
+
+    def send_file(self, remote: str, name: str, data: bytes, path: str = "") -> None:
+        """Connect to the station and send it a file (YAPP)."""
+        self._not_in_bbs_mode()
+        if not self.station.tx_enabled:
+            raise TransmitRefused("Transmitting is switched off")
+        if not self.connection.connected:
+            raise ConnectionError("The TNC is not connected")
+        addr = Address.parse(remote)
+        key = str(addr)
+        if key in self._yapp:
+            raise ValueError(f"A file transfer with {key} is already running")
+        name = yapp.safe_name(name)
+        self.transfers.append({"remote": key, "direction": "out", "name": name, "size": len(data), "done": 0,
+                               "offset": 0, "state": "connecting", "started": time.time(), "detail": ""})
+        sess = self._new_session(addr, [Address.parse(p) for p in Config(path=path).paths()])
+
+        def on_state(state: str, detail: str) -> None:
+            changes: dict[str, Any] = {"state": state, "detail": detail}
+            if state == "sending":
+                changes["offset"] = int(detail or 0)
+                changes["data_started"] = time.time()
+                changes["acked_at_start"] = sess.acked_bytes
+            self._transfer_update(key, **changes)
+            if state in ("done", "refused", "cancelled"):
+                self._spawn(self._hang_up(key))
+
+        self._yapp[key] = yapp.Sender(name, data, sess.send_bytes, on_state)
+        sess.connect()
+
+    def transfer_progress(self, t: dict[str, Any]) -> int:
+        """Bytes of the file the other side has (sending: acknowledged by the link)."""
+        if t["direction"] == "out" and t["state"] == "sending":
+            sess = self.sessions.get(t["remote"])
+            if sess is not None:
+                sent = sess.acked_bytes - t.get("acked_at_start", 0)
+                return max(0, min(t["size"], t.get("offset", 0) + sent))
+        return t.get("done", 0) if t["state"] != "done" else t["size"]
+
+    def _start_receiving(self, key: str) -> None:
+        sess = self.sessions[key]
+        folder = self.files_folder()
+        self.transfers.append({"remote": key, "direction": "in", "name": "", "size": 0, "done": 0, "offset": 0,
+                               "state": "waiting", "started": time.time(), "detail": ""})
+
+        def ask(name: str, size: int, answer: Callable[[bool], None]) -> None:
+            self._offers[key] = answer
+            self._transfer_update(key, name=name, size=size, state="offered")
+            self._emit("file_offer", {"remote": key, "name": name, "size": size})
+            # nobody answered in two minutes: refused
+            asyncio.get_running_loop().call_later(120, lambda: self.answer_file(key, False))
+
+        def on_state(state: str, detail: str) -> None:
+            changes: dict[str, Any] = {"state": state}
+            if state == "receiving":
+                changes.update(offset=int(detail or 0), data_started=time.time())
+            if state == "done":
+                changes["path"] = detail
+            elif detail and state != "offered":
+                changes["detail"] = detail
+            self._transfer_update(key, **changes)
+
+        def on_progress(got: int, size: int) -> None:
+            t = self._transfer(key)
+            if t is not None:
+                t["done"] = got
+                self._emit("files", {"remote": key})
+
+        self._yapp[key] = yapp.Receiver(folder, sess.send_bytes, ask, on_state, on_progress)
+
+    def answer_file(self, remote: str, accept: bool) -> None:
+        answer = self._offers.pop(remote, None)
+        if answer:
+            answer(accept)
+
+    def cancel_transfer(self, remote: str) -> None:
+        handler = self._yapp.get(remote)
+        if handler is not None:
+            handler.cancel()
+            self._spawn(self._hang_up(remote))
+
+    async def _hang_up(self, key: str) -> None:
+        await asyncio.sleep(3)  # the last packets and their acknowledgements first
+        sess = self.sessions.get(key)
+        if sess is not None and sess.state == CONNECTED and key not in self._yapp:
+            sess.disconnect()
+
+    def _transfer_link_gone(self, key: str, reason: str) -> None:
+        handler = self._yapp.pop(key, None)
+        if isinstance(handler, yapp.Receiver):
+            handler._close()  # noqa: SLF001 - the part received stays, to resume later
+        t = self._transfer(key)
+        if t is not None:
+            self._transfer_update(key, state="failed", detail=reason or "link lost")
 
     def _terminal(self, remote: str, kind: str, text: str) -> None:
         entry = {"time": time.time(), "remote": remote, "kind": kind, "text": text}

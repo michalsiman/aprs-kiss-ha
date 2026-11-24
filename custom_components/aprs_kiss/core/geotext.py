@@ -1,0 +1,83 @@
+"""Positions written in text (chat, APRS messages): finding them, and writing one.
+
+Found are the ways people write a position: decimal degrees ("49.7475, 13.3776", "49.7475N 13.3776E"),
+degrees and minutes or degrees, minutes and seconds with N/S E/W ("49°44.85'N 13°22.66'E",
+"49°44'51"N 13°22'39"E"), APRS's own ("4944.85N/01322.66E") and a Maidenhead locator of six characters
+("JO60UF"). Written is "QTH 49.74750, 13.37760": short, plain ASCII (an APRS message has 67 characters)
+and understood by anyone.
+"""
+
+from __future__ import annotations
+
+import re
+
+_NUM = r"(\d{1,3}(?:[.,]\d+)?)"
+_DECIMAL = re.compile(r"(?<![\w.])(-?\d{1,2}\.\d{3,})\s*°?\s*([NSns])?\s*[,;/ ]\s*(-?\d{1,3}\.\d{3,})\s*°?\s*([EWew])?(?![\w.])")
+_DMS = re.compile(r"(\d{1,2})\s*°\s*(\d{1,2})\s*['′]\s*(\d{1,2}(?:[.,]\d+)?)\s*(?:\"|″|'')\s*([NSns])[,;/ ]*\s*"
+                  r"(\d{1,3})\s*°\s*(\d{1,2})\s*['′]\s*(\d{1,2}(?:[.,]\d+)?)\s*(?:\"|″|'')\s*([EWew])")
+_DM = re.compile(r"(\d{1,2})\s*°\s*(\d{1,2}(?:[.,]\d+)?)\s*['′]?\s*([NSns])[,;/ ]*\s*(\d{1,3})\s*°\s*(\d{1,2}(?:[.,]\d+)?)\s*['′]?\s*([EWew])")
+_APRS = re.compile(r"(?<!\d)(\d{2})(\d{2}\.\d{1,2})\s*([NS])\s*[/\\ ,]?\s*(\d{3})(\d{2}\.\d{1,2})\s*([EW])")
+_LOCATOR = re.compile(r"(?<![A-Za-z0-9])([A-Ra-r]{2}\d{2}[A-Xa-x]{2})(?![A-Za-z0-9])")
+
+
+def _f(text: str) -> float:
+    return float(text.replace(",", "."))
+
+
+def _ok(lat: float, lon: float) -> bool:
+    return -90 <= lat <= 90 and -180 <= lon <= 180 and not (lat == 0 and lon == 0)
+
+
+def locator_to_position(loc: str) -> tuple[float, float]:
+    """The middle of a six-character Maidenhead square."""
+    loc = loc.upper()
+    lon = (ord(loc[0]) - 65) * 20 + int(loc[2]) * 2 + (ord(loc[4]) - 65) / 12 + 1 / 24 - 180
+    lat = (ord(loc[1]) - 65) * 10 + int(loc[3]) + (ord(loc[5]) - 65) / 24 + 1 / 48 - 90
+    return round(lat, 5), round(lon, 5)
+
+
+def find_positions(text: str) -> list[tuple[float, float]]:
+    """Every position written in the text, in the order they come."""
+    found: list[tuple[int, float, float]] = []
+    taken: list[tuple[int, int]] = []
+
+    def add(m: re.Match, lat: float, lon: float) -> None:
+        if not _ok(lat, lon) or any(a < m.end() and m.start() < b for a, b in taken):
+            return
+        taken.append((m.start(), m.end()))
+        found.append((m.start(), round(lat, 6), round(lon, 6)))
+
+    for m in _DMS.finditer(text):
+        lat = int(m[1]) + int(m[2]) / 60 + _f(m[3]) / 3600
+        lon = int(m[5]) + int(m[6]) / 60 + _f(m[7]) / 3600
+        add(m, -lat if m[4].upper() == "S" else lat, -lon if m[8].upper() == "W" else lon)
+    for m in _DM.finditer(text):
+        lat, lon = int(m[1]) + _f(m[2]) / 60, int(m[4]) + _f(m[5]) / 60
+        add(m, -lat if m[3].upper() == "S" else lat, -lon if m[6].upper() == "W" else lon)
+    for m in _APRS.finditer(text):
+        lat, lon = int(m[1]) + float(m[2]) / 60, int(m[4]) + float(m[5]) / 60
+        add(m, -lat if m[3] == "S" else lat, -lon if m[6] == "W" else lon)
+    for m in _DECIMAL.finditer(text):
+        lat, lon = float(m[1]), float(m[3])
+        if m[2] and m[2].upper() == "S":
+            lat = -abs(lat)
+        if m[4] and m[4].upper() == "W":
+            lon = -abs(lon)
+        add(m, lat, lon)
+    for m in _LOCATOR.finditer(text):
+        if any(c.isdigit() for c in m[1][:2]) or not m[1][2:4].isdigit():
+            continue
+        add(m, *locator_to_position(m[1]))
+    return [(lat, lon) for _, lat, lon in sorted(found)]
+
+
+def write_position(lat: float, lon: float) -> str:
+    return f"QTH {lat:.5f}, {lon:.5f}"
+
+
+def position_to_locator(lat: float, lon: float) -> str:
+    """The six-character Maidenhead locator of a position ("JO70XQ")."""
+    lon = min(max(lon + 180, 0), 359.999999)
+    lat = min(max(lat + 90, 0), 179.999999)
+    return (chr(65 + int(lon // 20)) + chr(65 + int(lat // 10)) + str(int(lon % 20 // 2)) + str(int(lat % 10))
+            + chr(97 + int(lon % 2 * 12)) + chr(97 + int(lat % 1 * 24))).upper()

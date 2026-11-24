@@ -20,7 +20,11 @@ from .ax25 import Address
 _LOGGER = logging.getLogger(__name__)
 
 APP_NAME = "aprs-kiss"
-VERSION = "0.1.52"
+VERSION = "1.1.0"
+# A beta (a pre-release on GitHub, tag vX.Y.Z-beta): betas take the next patch numbers (1.0.1, 1.0.2 …),
+# the next stable release a higher minor one (1.1.0), so updating always goes up.
+BETA = False
+VERSION_LABEL = f"{VERSION} beta" if BETA else VERSION
 MIN_BEACON_MINUTES = 10
 
 
@@ -51,11 +55,13 @@ class Config:
     tracker_minutes: int = 2
     tracker_profile: str = "car"  # smart: walk, bike or car
     tracker_still_minutes: int = 60  # smart: standing still, once in this many minutes
+    offer_tracker: bool = True  # phone: you seem to be driving with the tracker off - offer to switch it on
     road_alerts: bool = False  # while the tracker runs: warn about road incidents ahead…
     meet_alerts: bool = False  # …and about other moving stations ahead…
     road_alert_km: int = 5  # …this far
     tracked_callsigns: str = ""
     accept_incoming: bool = False
+    files_accept: bool = False  # Files: other stations may connect and send us a file (YAPP); each is asked about
     # APRS-IS
     aprsis_enabled: bool = False
     licence_confirmed: bool = False
@@ -76,6 +82,7 @@ class Config:
     map_trails: bool = False  # the map draws where each moving station went in the last half hour
     map_files: str = ""  # imported offline maps (MBTiles, PMTiles, …), one path per line
     map_imported: bool = True  # offline: the imported map (when there is one) over the bundled one
+    spot_last: str = ""  # Messages › Spot: the last spot (JSON: program, reference, frequency, mode, gateway)
     map_filters: str = ""  # the map shows only these kinds of stations ("weather,moving,road"); empty = all
     map_tools_hidden: bool = False  # the map's button bar folded into one gear button
     map_offline: bool = False  # the bundled offline map (borders, cities) instead of OpenStreetMap tiles
@@ -92,7 +99,8 @@ class Config:
     bbs_enabled: bool = False  # run the BBS server (its own SSID, below)
     bbs_ssid: int = 1  # the BBS answers on your callsign with this SSID
     bbs_list: str = ""  # saved BBSes and nodes for the terminal: JSON [{"call": ..., "path": ...}]
-    check_updates: bool = True  # ask GitHub once a day whether a newer version is out
+    check_updates: bool = True
+    update_beta: bool = False  # also offer beta versions (pre-releases on GitHub): for testers  # ask GitHub once a day whether a newer version is out
     disclaimer_accepted: bool = False  # the first-start warning (transmitting needs a licence) was accepted
     language_asked: bool = False
     bbs_sentence_ok: bool = False  # the BBS SERVER sentence was typed once: not asked again

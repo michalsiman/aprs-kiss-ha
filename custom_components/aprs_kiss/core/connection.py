@@ -22,6 +22,9 @@ _LOGGER = logging.getLogger(__name__)
 
 RECONNECT_MIN = 2.0
 RECONNECT_MAX = 60.0
+# A TNC on a cable or Bluetooth: looking for it is cheap, and a radio plugged in should be found at once.
+LOCAL_KINDS = {"usb", "serial", "bt", "ble"}
+RECONNECT_LOCAL = 3.0
 
 
 @dataclass
@@ -48,7 +51,21 @@ async def _open_tcp(s: TncSettings) -> Streams:
 async def _open_serial(s: TncSettings) -> Streams:
     import serial_asyncio_fast  # noqa: PLC0415 - optional, only for serial TNCs
 
-    return await serial_asyncio_fast.open_serial_connection(url=s.device, baudrate=s.baudrate)
+    if not s.device:
+        raise OSError("No serial port chosen")
+    try:
+        return await serial_asyncio_fast.open_serial_connection(url=s.device, baudrate=s.baudrate)
+    except Exception as err:  # noqa: BLE001 - serial.SerialException and OSError: said plainly, then retried
+        text = str(err)
+        if isinstance(err, FileNotFoundError) or "No such file" in text or "Errno 2" in text \
+                or "FileNotFoundError" in text or "cannot find the file" in text:
+            raise OSError(f"The serial port {s.device} is not there") from err
+        if "Errno 5" in text or "(5," in text or "Input/output" in text or "configure port" in text:
+            # e.g. /dev/ttyS0: a port the computer names but has no hardware behind
+            raise OSError(f"The serial port {s.device} does not answer") from err
+        if "Permission denied" in text or "Errno 13" in text or "PermissionError" in text or "Access is denied" in text:
+            raise OSError(f"Not allowed to open {s.device}") from err
+        raise OSError(text or type(err).__name__) from err
 
 
 TRANSPORTS: dict[str, Transport] = {"tcp": _open_tcp, "serial": _open_serial}
@@ -116,7 +133,7 @@ class KissConnection:
                 self.last_error = str(err) or type(err).__name__
                 _LOGGER.debug("KISS TNC not reachable (%s), retrying in %.0f s", self.last_error, delay)
                 await self._sleep(delay)
-                delay = min(delay * 2, RECONNECT_MAX)
+                delay = RECONNECT_LOCAL if self._settings.kind in LOCAL_KINDS else min(delay * 2, RECONNECT_MAX)
                 continue
             self._writer = writer
             self.last_error = None
@@ -148,8 +165,21 @@ class KissConnection:
                 await self._sleep(RECONNECT_MIN)
 
     async def _sleep(self, seconds: float) -> None:
-        with contextlib.suppress(asyncio.TimeoutError):
-            await asyncio.wait_for(self._stop.wait(), timeout=seconds)
+        """Wait before trying again; stop() or retry_now() end the wait early."""
+        self._wake = asyncio.Event()
+        stop, wake = asyncio.ensure_future(self._stop.wait()), asyncio.ensure_future(self._wake.wait())
+        try:
+            await asyncio.wait({stop, wake}, timeout=seconds, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            stop.cancel()
+            wake.cancel()
+
+    _wake: asyncio.Event | None = None
+
+    def retry_now(self) -> None:
+        """Not connected: try again at once (the app came back to the screen, a radio may be plugged in)."""
+        if self._wake is not None and not self.connected:
+            self._wake.set()
 
     async def _send_parameters(self) -> None:
         s = self._settings

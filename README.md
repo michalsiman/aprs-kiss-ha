@@ -211,6 +211,9 @@ The entity *TNC connected* and the counter *Packets received* show the same in H
 4. Check it on [aprs.fi](https://aprs.fi) a minute later, if an iGate hears you.
 5. **Send a message**: APRS tab, *To* + text → *Send*. The message is repeated after 30, 60, 120 and 240 seconds until the recipient acknowledges it; the panel shows *waiting for ack*, *acknowledged* or *no ack*.
 
+6. **Spot an activation**: the *Spot* button under the message line – SOTA, POTA, WWFF, SIOTA, GMA, WCA castles, IOTA islands and lighthouses. The self-spot goes as an APRS message to a gateway (APRS2SOTA for SOTAwatch, Camilla DL0QW-12 for GMA, or APSPOT for pota.app); the reference is checked, kHz become MHz, the comment is shortened to fit, and the message is shown before it goes. The gateway's answer comes back as a message.
+7. **Services on APRS**: the *Services* button – FIND (where a station was last heard), REPEAT (the nearest repeaters), WXNOW (the nearest weather), UTC, satellite passes (9M2PJU-4) and e-mail (MAILMY). A click puts the command in the message line, ready to send.
+
 Limits: at least 3 seconds between frames and at most 30 frames in 10 minutes (APRS); messages up to 67 characters.
 
 ## 8. Packet radio terminal and chat
