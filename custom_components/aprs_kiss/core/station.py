@@ -10,6 +10,7 @@ import asyncio
 import contextlib
 import math
 import logging
+import re
 import time
 from collections import OrderedDict, deque
 from collections.abc import Awaitable, Callable
@@ -235,6 +236,10 @@ class Station:
                 _LOGGER.debug("Message %s to %s %s", msg.msg_id, msg.to, msg.state)
             return
         msg_no = packet.get("msgNo")
+        if not msg_no and re.fullmatch(r"(ack|rej)\S{1,6}", text.strip()):
+            # an ack/rej whose message number is broken (non-ASCII, too long): not a message to show
+            _LOGGER.debug("Malformed %s from %s: %r", text[:3], sender, text)
+            return
         if msg_no:
             # Acknowledge every copy, also repeated ones: the sender did not hear our ack.
             self._spawn(self._send_ack(sender, str(msg_no), via_is))
