@@ -83,6 +83,19 @@ def position(lat: float, lon: float, symbol: str = "/-", comment: str = "", mess
     return f"{kind}{_lat(lat)}{symbol[0]}{_lon(lon)}{symbol[1]}{clean_text(comment, MAX_COMMENT)}"
 
 
+def fix_mojibake(text: str) -> str:
+    """UTF-8 read as Latin-1 (or cp1252) somewhere on the way ("TURKÄ°YE" for "TURKİYE"): put it right.
+    Only when the whole text then reads as UTF-8 and something changed; anything else stays as it was."""
+    if not any("\u00c2" <= c <= "\u00f4" for c in text):
+        return text
+    for wrong in ("latin-1", "cp1252"):  # cp1252: Windows' Latin-1 ("ÄŸ" for "ğ")
+        try:
+            return text.encode(wrong).decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            continue
+    return text
+
+
 def message_id(counter: int) -> str:
     """Message number, 1–5 alphanumeric characters (APRS 1.0: up to 5)."""
     return str(counter % 100000)

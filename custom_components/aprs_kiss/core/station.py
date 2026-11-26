@@ -226,7 +226,7 @@ class Station:
 
     def _handle_message(self, packet: dict[str, Any], now: float, via_is: bool = False) -> None:
         sender = packet["from"]
-        text = packet.get("message_text", "")
+        text = aprs.fix_mojibake(packet.get("message_text", ""))
         response = packet.get("response")
         if response in ("ack", "rej"):
             msg = self.outgoing.get(str(packet.get("msgNo", "")))

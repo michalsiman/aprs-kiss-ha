@@ -153,6 +153,15 @@ def frame_kind(control: int) -> str:
     return {U_SABM: "SABM", U_DISC: "DISC", U_DM: "DM", U_UA: "UA", U_FRMR: "FRMR", U_UI: "UI"}.get(control & ~PF, "U?")
 
 
+def info_text(info: bytes) -> str:
+    """The info field as text: UTF-8 when it is (Czech, Turkish … comments and messages), else Latin-1
+    (old software, and binary bytes of some formats), which never fails."""
+    try:
+        return info.decode("utf-8")
+    except UnicodeDecodeError:
+        return info.decode("latin-1")
+
+
 @dataclass
 class Frame:
     """An AX.25 frame (version 2.0, modulo 8). APRS uses UI frames only."""
@@ -237,7 +246,7 @@ class Frame:
     def tnc2(self) -> str:
         """The frame in TNC2 text form, as aprslib parses it (UI frames)."""
         path = "".join(f",{d}{'*' if d.repeated else ''}" for d in self.path)
-        return f"{self.source}>{self.destination}{path}:" + self.info.decode("latin-1")
+        return f"{self.source}>{self.destination}{path}:" + info_text(self.info)
 
     def monitor(self) -> str:
         """A one-line monitor view like classic TNCs: 'OK1ABC>OK0BBS,WIDE1-1* <I C S2 R1>: text'."""
