@@ -70,6 +70,14 @@ const TEXTS = {
 
 // Texts of the screens that came with the shared engine (map, digipeater, GPS, BBS SERVER, TAK, #APRSThursday).
 Object.assign(TEXTS.en, {
+  bulletins: 'Bulletins', blnReach: 'From', blnAll: 'anywhere', blnWithin: 'within {km} km', blnMine: 'Mine, going out', blnHeard: 'Heard',
+  blnEmpty: 'No bulletins around yet. Clubs, nets and weather services send them – by radio and, with APRS-IS, over the internet.',
+  blnHidden: 'No bulletins within this distance ({n} further away or from stations whose position is not known).',
+  blnNew: 'New bulletin', blnKindB: 'Bulletin (BLN0–9, news for hours)', blnKindA: 'Announcement (BLNA–Z, an event, for days)',
+  blnLine: 'Number', blnGroup: 'Group (optional)', blnHours: 'Send for', blnText: 'Text', blnSend: 'Send', blnStop: 'Stop',
+  blnDelete: 'Delete', blnSent: 'sent {n}×', blnNext: 'next in {m} min', blnUntil: 'until {t}', blnTimes: 'heard {n}×', blnNewTag: 'NEW',
+  blnAnn: 'announcement', blnRadio: 'radio', blnNet: 'internet',
+  blnAbout: 'Bulletins are APRS messages to everybody: BLN0–BLN9 news for the next few hours (a net tonight, a repeater down), BLNA–BLNZ announcements (a hamfest, a contest) kept for days, BLN1WX and the like a bulletin to a group, NWS-… weather alerts. Nobody acknowledges them, so the sender repeats them; yours go out at once, then after 1, 5 and 10 min and every 20 min (an announcement every hour) until the time is up or you stop it. A new text with the same number replaces the old one.',
   privTitle: 'Position privacy', privAmbiguity: 'How exact my position goes out', privExact: 'Exact',
   privAbout: 'Less exact – about {dist}', privMotion: 'Send speed and course', privAltitude: 'Send altitude',
   privHint: 'Less exact: the last digits of the position are left out (APRS position ambiguity), maps show only the square you are in. It applies to the beacon and the position button. EMERGENCY always goes exact, with speed and altitude – help has to find you.',
@@ -109,6 +117,14 @@ Object.assign(TEXTS.en, {
   exclusive: 'is on: APRS, messages, terminal and chat are off.', switchOff: 'Switch off', digipeated: 'digipeated',
 });
 Object.assign(TEXTS.cs, {
+  bulletins: 'Nástěnka', blnReach: 'Odkud', blnAll: 'odkudkoli', blnWithin: 'do {km} km', blnMine: 'Moje, vysílají se', blnHeard: 'Zachycené',
+  blnEmpty: 'Zatím tu nejsou žádné bulletiny. Posílají je kluby, kroužky a meteoslužby – chodí rádiem a s APRS-IS i z internetu.',
+  blnHidden: 'V této vzdálenosti nejsou žádné bulletiny (dalších {n} je dál nebo od stanic s neznámou polohou).',
+  blnNew: 'Nový bulletin', blnKindB: 'Bulletin (BLN0–9, zprávy na pár hodin)', blnKindA: 'Oznámení (BLNA–Z, akce, na dny)',
+  blnLine: 'Číslo', blnGroup: 'Skupina (nepovinné)', blnHours: 'Vysílat', blnText: 'Text', blnSend: 'Odeslat', blnStop: 'Zastavit',
+  blnDelete: 'Smazat', blnSent: 'odesláno {n}×', blnNext: 'další za {m} min', blnUntil: 'do {t}', blnTimes: 'slyšeno {n}×', blnNewTag: 'NOVÉ',
+  blnAnn: 'oznámení', blnRadio: 'rádiem', blnNet: 'internet',
+  blnAbout: 'Bulletiny jsou APRS zprávy pro všechny: BLN0–BLN9 novinky na pár hodin (dnešní kroužek, nefunkční převaděč), BLNA–BLNZ oznámení akcí (setkání, závod) platná i několik dní, BLN1WX a podobné bulletin pro skupinu, NWS-… meteorologické výstrahy. Nikdo je nepotvrzuje, proto je odesílatel opakuje; tvoje odejdou hned, pak po 1, 5 a 10 min a dál každých 20 min (oznámení jednou za hodinu), dokud čas nevyprší nebo je nezastavíš. Nový text se stejným číslem nahradí starý.',
   privTitle: 'Soukromí polohy', privAmbiguity: 'Jak přesně posílat moji polohu', privExact: 'Přesně',
   privAbout: 'Méně přesně – asi {dist}', privMotion: 'Posílat rychlost a směr', privAltitude: 'Posílat nadmořskou výšku',
   privHint: 'Méně přesně: poslední číslice polohy se vynechají (APRS position ambiguity), mapy ukážou jen čtverec, ve kterém jsi. Platí pro maják i tlačítko polohy. NOUZE jde vždy přesně, s rychlostí i výškou – pomoc tě musí najít.',
@@ -348,7 +364,7 @@ class AprsKissPanel extends HTMLElement {
       await this._loadExtra();
       this._renderHeader();
       if (this._tab === 'aprs') this._updateAprs();
-      else if (['bbs', 'tak', 'thursday'].includes(this._tab)) this._refreshTab?.();
+      else if (['bbs', 'tak', 'thursday', 'bulletins'].includes(this._tab)) this._refreshTab?.();
     } catch { /* keep the last state */ }
   }
 
@@ -377,8 +393,10 @@ class AprsKissPanel extends HTMLElement {
     } else if (d.kind === 'aprs_message') {
       this._state.messages.push(d.message);
       if (this._tab === 'aprs') this._render();
-    } else if (['thursday', 'tak', 'bbs', 'gps'].includes(d.kind)) {
-      this._extraSoon(() => { if (this._tab === d.kind || (d.kind === 'gps' && this._tab === 'aprs')) this._refreshTab?.(); });
+    } else if (['thursday', 'tak', 'bbs', 'gps', 'bulletin'].includes(d.kind)) {
+      this._extraSoon(() => {
+        if (this._tab === d.kind || (d.kind === 'gps' && this._tab === 'aprs') || (d.kind === 'bulletin' && this._tab === 'bulletins')) this._refreshTab?.();
+      });
     }
   }
 
@@ -528,7 +546,7 @@ class AprsKissPanel extends HTMLElement {
     const nav = this.shadowRoot.querySelector('nav');
     const mode = this._extra?.mode || '';
     // BBS SERVER or TAK on: only that, the monitor and the settings
-    const tabs = mode ? [mode, 'monitor', 'settings'] : ['chat', 'terminal', 'monitor', 'aprs', 'thursday', 'settings'];
+    const tabs = mode ? [mode, 'monitor', 'settings'] : ['chat', 'terminal', 'monitor', 'aprs', 'bulletins', 'thursday', 'settings'];
     if (!tabs.includes(this._tab)) this._tab = tabs[0];
     nav.innerHTML = tabs.map((k) => k === 'settings'
       ? `<button data-tab="${k}" class="gear ${this._tab === k ? 'active' : ''}" title="${t[k]}" aria-label="${t[k]}"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="${COG}"/></svg></button>`
@@ -547,6 +565,7 @@ class AprsKissPanel extends HTMLElement {
     this._refreshTab = null;
     if (this._tab === 'settings') this._renderSettings(main);
     else if (this._tab === 'thursday') this._renderThursday(main);
+    else if (this._tab === 'bulletins') this._renderBulletins(main);
     else if (this._tab === 'bbs') this._renderBbs(main);
     else if (this._tab === 'tak') this._renderTak(main);
     else if (this._tab === 'chat') this._renderChat(main);
@@ -1409,6 +1428,95 @@ AprsKissPanel.prototype._renderThursday = function renderThursday(main) {
     log.innerHTML = items.length ? items.map((e) => `<div class="chatline ${e.kind === 'out' || e.kind === 'leave' ? 'out' : ''}"><span class="t">${time(e.time)}</span>
       <span class="c">${esc(e.from)}:</span>${e.kind === 'server' ? '<i>' + esc(e.text) + '</i>' : esc(e.text)}${e.via === 'internet' ? ' 🌐' : ''}</div>`).join('') : `<div class="hint">${t.thEmpty}</div>`;
     log.scrollTop = log.scrollHeight;
+  };
+  this._refreshTab();
+};
+
+// ─── Bulletins ────────────────────────────────────────────────────────────
+
+const BLN_REACH = [50, 150, 500, 0];
+
+AprsKissPanel.prototype._renderBulletins = function renderBulletins(main) {
+  const t = this._t;
+  const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_m, k) => v[k] ?? '');
+  const reach = () => Number(localStorage.getItem('aprs-kiss-bln-km') ?? 150);
+  main.classList.add('scroll');
+  main.innerHTML = `
+    <div class="card"><h2>${t.blnNew}</h2>
+      <div class="row" style="flex-wrap:wrap;gap:8px">
+        <select class="b-kind"><option value="b">${t.blnKindB}</option><option value="a">${t.blnKindA}</option></select>
+        <label>${t.blnLine} <select class="b-line"></select></label>
+        <input class="b-group" maxlength="5" placeholder="${t.blnGroup}" style="width:160px">
+        <label>${t.blnHours} <select class="b-hours">${[1, 4, 12, 24, 48].map((h) => `<option value="${h}">${h} h</option>`).join('')}</select></label>
+      </div>
+      <div class="row msgrow"><input class="text b-text" maxlength="67" placeholder="${t.blnText}">
+        <div class="seg" role="group" title="${t.viaTitle}">
+          <button type="button" data-via="radio" class="${this._via() === 'radio' ? 'on' : ''}">📻</button><button type="button" data-via="both" class="${this._via() === 'both' ? 'on' : ''}">📻+🌐</button><button type="button" data-via="internet" class="${this._via() === 'internet' ? 'on' : ''}">🌐</button></div>
+        <button class="btn b-send">📢 ${t.blnSend}</button></div>
+      <div class="hint">${t.blnAbout}</div></div>
+    <div class="error">${esc(this._error)}</div>
+    <div class="card"><div class="row" style="justify-content:space-between;align-items:center"><h2>${t.bulletins}</h2>
+      <label>${t.blnReach} <select class="b-reach">${BLN_REACH.map((k) => `<option value="${k}" ${reach() === k ? 'selected' : ''}>${k ? fill(t.blnWithin, { km: k }) : t.blnAll}</option>`).join('')}</select></label></div>
+      <div class="b-list"></div></div>`;
+  const q = (c) => main.querySelector(c);
+  const lines = () => {
+    const ann = q('.b-kind').value === 'a';
+    const chars = ann ? 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' : '0123456789';
+    const taken = new Set(((this._extra || {}).bulletins?.mine || []).map((m) => m.addressee));
+    const first = [...chars].find((c) => !taken.has(`BLN${c}`)) || chars[0];
+    q('.b-line').innerHTML = [...chars].map((c) => `<option ${c === first ? 'selected' : ''}>${c}</option>`).join('');
+    q('.b-group').hidden = ann;
+    q('.b-hours').value = ann ? '24' : '4';
+  };
+  q('.b-kind').addEventListener('change', lines);
+  q('.b-group').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
+  lines();
+  main.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+    this._viaChoice = b.dataset.via;
+    main.querySelectorAll('.seg button').forEach((x) => x.classList.toggle('on', x === b));
+  }));
+  q('.b-reach').addEventListener('change', (e) => { localStorage.setItem('aprs-kiss-bln-km', e.target.value); this._refreshTab(); });
+  const send = async () => {
+    const text = q('.b-text').value.trim();
+    if (!text) return;
+    const ann = q('.b-kind').value === 'a';
+    if (await this._ws({ type: 'aprs_kiss/bulletin_send', line: q('.b-line').value, group: ann ? '' : q('.b-group').value.trim().toUpperCase(),
+                         text, hours: Number(q('.b-hours').value), via: this._via() })) {
+      q('.b-text').value = '';
+      await this._loadExtra();
+      lines();
+      this._refreshTab();
+    }
+  };
+  q('.b-send').addEventListener('click', send);
+  q('.b-text').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+  this._ws({ type: 'aprs_kiss/bulletin_read' });
+  const fresh = new Set();
+  this._refreshTab = () => {
+    const box = q('.b-list');
+    if (!box) return;
+    const b = (this._extra || {}).bulletins || { heard: [], mine: [] };
+    const now = Date.now() / 1000;
+    const km = reach();
+    b.heard.forEach((e) => { if (!e.read) fresh.add(`${e.from}|${e.addressee}`); });
+    const shown = b.heard.filter((e) => !km || e.via === 'radio' || (e.km != null && e.km <= km));
+    const chip = (e) => `<b style="font-size:12px;padding:1px 8px;border-radius:10px;background:var(--secondary-background-color)">${esc(e.addressee)}${e.kind === 'announcement' ? ' · ' + t.blnAnn : ''}</b>`;
+    const mine = b.mine.map((m) => `<div class="list-row" style="background:var(--secondary-background-color);border-radius:10px;padding:6px 10px;margin-bottom:6px">
+        <div class="grow">${chip(m)} ${esc(m.text)}<br><small>${fill(t.blnSent, { n: m.sent })}${m.next > now ? ' · ' + fill(t.blnNext, { m: Math.max(1, Math.round((m.next - now) / 60)) }) : ''} · ${fill(t.blnUntil, { t: time(m.until) })}</small></div>
+        <button class="btn secondary b-stop" data-a="${esc(m.addressee)}">${t.blnStop}</button></div>`).join('');
+    const heard = shown.map((e) => `<div class="list-row"><div class="grow">${chip(e)} <b>${esc(e.from)}</b>
+        ${fresh.has(`${e.from}|${e.addressee}`) ? `<b class="ok" style="font-size:11px">${t.blnNewTag}</b>` : ''}<br>${esc(e.text)}
+        <br><small>${time(e.time)}${e.km != null ? ` · ${Math.round(e.km * 10) / 10} km` : ''} · ${e.via === 'radio' ? t.blnRadio : t.blnNet}${(e.count || 1) > 1 ? ' · ' + fill(t.blnTimes, { n: e.count }) : ''}</small></div>
+        <button class="btn secondary b-del" data-s="${esc(e.from)}" data-a="${esc(e.addressee)}">${t.blnDelete}</button></div>`).join('');
+    const head = (x) => `<div class="hint" style="font-weight:600;margin:8px 0 4px">${x}</div>`;
+    box.innerHTML = (mine ? `${head(t.blnMine)}${mine}${head(t.blnHeard)}` : '')
+      + (heard || `<div class="hint">${b.heard.length ? fill(t.blnHidden, { n: b.heard.length }) : t.blnEmpty}</div>`);
+    box.querySelectorAll('.b-stop').forEach((x) => x.addEventListener('click', async () => {
+      await this._ws({ type: 'aprs_kiss/bulletin_stop', addressee: x.dataset.a }); await this._loadExtra(); lines(); this._refreshTab();
+    }));
+    box.querySelectorAll('.b-del').forEach((x) => x.addEventListener('click', async () => {
+      await this._ws({ type: 'aprs_kiss/bulletin_delete', sender: x.dataset.s, addressee: x.dataset.a }); await this._loadExtra(); this._refreshTab();
+    }));
   };
   this._refreshTab();
 };

@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.4.0] - 2026-11-27
 
 - **The same engine as the APRS & Packet app** (copied into `core/` by `tools/sync_core.py`), so fixes and new features come to both. The message history moves from Home Assistant's storage to `/config/aprs_kiss/state.json` by itself.
 - **Map**: each station is its APRS symbol on a light disc with its callsign; stations that would cover each other move apart with a thin line to where they really are; **trails** (the last half hour); **filters** (weather stations, moving stations, repeaters, road incidents); **repeaters show their frequency**, band and digital mode; APRS **objects** are places of their own; impossible jumps in a track start it again.
@@ -10,6 +10,7 @@
 - **Spot** (APRS tab): self-spotting a SOTA, POTA, WWFF, SIOTA, GMA, WCA, IOTA or lighthouse activation through APRS2SOTA, Camilla (DL0QW-12) or APSPOT, checked and shown before it goes – the same as in the app.
 - **Services** (APRS tab): FIND, REPEAT, WXNOW, UTC, satellite passes (9M2PJU-4) and e-mail (MAILMY), one click puts the command in the message line.
 - Core synced with the app's 1.7.0: each weather station keeps the time of its weather report (not just of its last packet), callsigns and web links are found in message texts, and the app's units (km or miles, °C or °F, hPa or inHg) and weather-around-you helpers are in the core for the panel to use.
+- **Bulletins** (a tab of its own): APRS bulletins and announcements from the stations around you – heard by radio always, from APRS-IS when the sender is within 50, 150 or 500 km (or from anywhere) – marked NEW until seen; and your own bulletin or announcement, repeated by itself (after 1, 5 and 10 min, then every 20 min, an announcement every hour) for 1–48 hours or until stopped.
 - **Position privacy** (a card in Settings): the position less exact – about 200 m, 2 km, 20 km or 110 km (APRS position ambiguity) – and speed and course, altitude left out if wished; EMERGENCY always exact.
 - Core synced with the app's 1.9.0: **position privacy** in the core (a less exact position – about 200 m to 110 km – and speed, course and altitude left out if wished; EMERGENCY always exact), **bulletins** received by radio and from APRS-IS (the server is asked for them) and kept with the history, Mic-E with EMERGENCY, Winlink (APRSLink) login helpers, and frames described in a few words for lists.
 - A serial TNC that is not there or does not answer is said plainly (not there, not answering, not allowed – the dialout group) instead of a bare "Could not configure port".

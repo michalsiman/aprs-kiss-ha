@@ -25,7 +25,7 @@ from .core.engine import Engine
 _LOGGER = logging.getLogger(__name__)
 
 # what the panel follows live (EVENT_TERMINAL with this "kind")
-PANEL_EVENTS = {"monitor", "terminal", "state", "chat", "aprs_message", "thursday", "tak", "bbs", "gps"}
+PANEL_EVENTS = {"monitor", "terminal", "state", "chat", "aprs_message", "thursday", "tak", "bbs", "gps", "bulletin"}
 # APRS-IS's "software" field: the integration, not the app
 SOFTWARE = f"aprs-kiss-ha {VERSION}"
 

@@ -42,6 +42,19 @@ def sentence_ok(mode: str, text: str) -> bool:
     return bool(_plain(text)) and _plain(text) in {_plain(s) for s in SENTENCES[mode]}
 
 
+BULLETINS_FOR_PANEL = 200
+
+
+def bulletins_of(hub) -> dict[str, Any]:
+    """The bulletins for the panel: all heard (newest first, each with the sender's distance when its position
+    is known – the panel picks how far), and ours still going out."""
+    heard = []
+    for e in sorted(hub.board.heard, key=lambda e: e.get("time", 0), reverse=True)[:BULLETINS_FOR_PANEL]:
+        km = hub._distance_to(e["from"]).get("km")  # noqa: SLF001 - the engine's own helper
+        heard.append({**e, "km": km if km is not None else e.get("km")})
+    return {"heard": heard, "mine": list(hub.board.mine)}
+
+
 def register(hass: HomeAssistant, hub_of) -> None:
     """hub_of(hass, entry_id) -> the Hub (raises when there is none)."""
 
@@ -72,6 +85,7 @@ def register(hass: HomeAssistant, hub_of) -> None:
             "thursday_wait": hub.thursday_wait(now),
             "tak": {"callsign": hub.tak_callsign, "uid": hub.tak_uid, "stations": list(hub.tak_stations.values()),
                     "chat": list(hub.tak_chat)} if hub.tak_mode else None,
+            "bulletins": bulletins_of(hub),
         })
 
     # ─── BBS SERVER or TAK instead of APRS ────────────────────────────────
@@ -196,6 +210,46 @@ def register(hass: HomeAssistant, hub_of) -> None:
             connection.send_result(msg["id"], {})
         except (TransmitRefused, ConnectionError, ValueError) as err:
             error(connection, msg["id"], err)
+
+    # ─── bulletins: heard from the stations around, and our own (repeated by the engine) ─────
+
+    @websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/bulletin_send", vol.Required("line"): str,
+                                      vol.Optional("group", default=""): str, vol.Required("text"): str,
+                                      vol.Optional("hours", default=0): vol.Coerce(float),
+                                      vol.Optional("via", default="both"): vol.In(["radio", "internet", "both"]),
+                                      vol.Optional("entry_id"): str})
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_bulletin_send(hass, connection, msg):
+        try:
+            entry = await hub_of(hass, msg.get("entry_id")).send_bulletin(
+                msg["line"], msg["group"], msg["text"], msg["via"], msg["hours"] or None)
+            connection.send_result(msg["id"], entry)
+        except (TransmitRefused, ConnectionError, ValueError) as err:
+            error(connection, msg["id"], err)
+
+    @websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/bulletin_stop", vol.Required("addressee"): str,
+                                      vol.Optional("entry_id"): str})
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_bulletin_stop(hass, connection, msg):
+        hub_of(hass, msg.get("entry_id")).stop_bulletin(msg["addressee"])
+        connection.send_result(msg["id"], {})
+
+    @websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/bulletin_delete", vol.Required("sender"): str,
+                                      vol.Required("addressee"): str, vol.Optional("entry_id"): str})
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_bulletin_delete(hass, connection, msg):
+        hub_of(hass, msg.get("entry_id")).delete_bulletin(msg["sender"], msg["addressee"])
+        connection.send_result(msg["id"], {})
+
+    @websocket_api.websocket_command({vol.Required("type"): "aprs_kiss/bulletin_read", vol.Optional("entry_id"): str})
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_bulletin_read(hass, connection, msg):
+        hub_of(hass, msg.get("entry_id")).bulletins_read()
+        connection.send_result(msg["id"], {})
 
     # ─── #APRSThursday ────────────────────────────────────────────────────
 
