@@ -219,6 +219,8 @@ SETTINGS_KEYS = {
     "digi_mode": str, "digi_max_hops": int, "digi_aliases": str,
     "gps_source": str, "gps_device": str, "gps_baudrate": int,
     "bbs_ssid": int, "tak_callsign": str, "tak_team": str, "tak_role": str, "tak_interval_min": int,
+    # position privacy: a less exact position (0 exact … 4 about 110 km), speed and course, altitude
+    "position_ambiguity": int, "send_motion": bool, "send_altitude": bool,
 }
 
 
@@ -272,6 +274,8 @@ async def ws_set_settings(hass, connection, msg):
             raise ValueError("The passcode is a number")
         if new.get("digi_mode", "off") not in ("off", "fillin", "wide"):
             raise ValueError("digi_mode")
+        if not 0 <= new.get("position_ambiguity", 0) <= 4:
+            raise ValueError("position_ambiguity")
         if new.get("gps_source", "manual") not in ("manual", "usb"):
             raise ValueError("gps_source")
         if new.get("gps_source") == "usb" and not new.get("gps_device"):

@@ -10,6 +10,7 @@
 - **Spot** (APRS tab): self-spotting a SOTA, POTA, WWFF, SIOTA, GMA, WCA, IOTA or lighthouse activation through APRS2SOTA, Camilla (DL0QW-12) or APSPOT, checked and shown before it goes – the same as in the app.
 - **Services** (APRS tab): FIND, REPEAT, WXNOW, UTC, satellite passes (9M2PJU-4) and e-mail (MAILMY), one click puts the command in the message line.
 - Core synced with the app's 1.7.0: each weather station keeps the time of its weather report (not just of its last packet), callsigns and web links are found in message texts, and the app's units (km or miles, °C or °F, hPa or inHg) and weather-around-you helpers are in the core for the panel to use.
+- **Position privacy** (a card in Settings): the position less exact – about 200 m, 2 km, 20 km or 110 km (APRS position ambiguity) – and speed and course, altitude left out if wished; EMERGENCY always exact.
 - Core synced with the app's 1.9.0: **position privacy** in the core (a less exact position – about 200 m to 110 km – and speed, course and altitude left out if wished; EMERGENCY always exact), **bulletins** received by radio and from APRS-IS (the server is asked for them) and kept with the history, Mic-E with EMERGENCY, Winlink (APRSLink) login helpers, and frames described in a few words for lists.
 - A serial TNC that is not there or does not answer is said plainly (not there, not answering, not allowed – the dialout group) instead of a bare "Could not configure port".
 

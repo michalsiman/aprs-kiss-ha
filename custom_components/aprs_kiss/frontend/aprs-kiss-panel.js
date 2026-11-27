@@ -70,6 +70,9 @@ const TEXTS = {
 
 // Texts of the screens that came with the shared engine (map, digipeater, GPS, BBS SERVER, TAK, #APRSThursday).
 Object.assign(TEXTS.en, {
+  privTitle: 'Position privacy', privAmbiguity: 'How exact my position goes out', privExact: 'Exact',
+  privAbout: 'Less exact – about {dist}', privMotion: 'Send speed and course', privAltitude: 'Send altitude',
+  privHint: 'Less exact: the last digits of the position are left out (APRS position ambiguity), maps show only the square you are in. It applies to the beacon and the position button. EMERGENCY always goes exact, with speed and altitude – help has to find you.',
   mapSource: 'Base map', mapAuto: 'Automatic (online, else offline)', mapOnline: 'Online (OpenStreetMap)', mapImported: 'My offline maps',
   mapNoImported: 'My offline maps (none uploaded)', mapBasic: 'Basic offline map (borders, roads, towns)',
   filter: 'Filter stations', filterOn: 'Shown only', filterAll: 'Show all stations', trails: 'Trails (where stations went in the last half hour)',
@@ -106,6 +109,9 @@ Object.assign(TEXTS.en, {
   exclusive: 'is on: APRS, messages, terminal and chat are off.', switchOff: 'Switch off', digipeated: 'digipeated',
 });
 Object.assign(TEXTS.cs, {
+  privTitle: 'Soukromí polohy', privAmbiguity: 'Jak přesně posílat moji polohu', privExact: 'Přesně',
+  privAbout: 'Méně přesně – asi {dist}', privMotion: 'Posílat rychlost a směr', privAltitude: 'Posílat nadmořskou výšku',
+  privHint: 'Méně přesně: poslední číslice polohy se vynechají (APRS position ambiguity), mapy ukážou jen čtverec, ve kterém jsi. Platí pro maják i tlačítko polohy. NOUZE jde vždy přesně, s rychlostí i výškou – pomoc tě musí najít.',
   mapSource: 'Mapový podklad', mapAuto: 'Automaticky (online, jinak offline)', mapOnline: 'Online (OpenStreetMap)', mapImported: 'Moje offline mapy',
   mapNoImported: 'Moje offline mapy (žádné nahrané)', mapBasic: 'Základní offline mapa (hranice, silnice, města)',
   filter: 'Filtr stanic', filterOn: 'Zobrazeno jen', filterAll: 'Zobrazit všechny stanice', trails: 'Ocásky (kudy stanice jely za poslední půlhodinu)',
@@ -724,6 +730,13 @@ class AprsKissPanel extends HTMLElement {
           <label class="field check"><input type="checkbox" class="f-incoming" ${st.accept_incoming ? 'checked' : ''}> ${t.incoming}</label>
           <label class="field">${t.txdelay}<input class="f-txdelay" type="number" min="0" max="1000" step="10" value="${st.txdelay_ms || 0}"></label>
         </div>
+        <div class="card"><h2>${t.privTitle}</h2>
+          <label class="field">${t.privAmbiguity}
+            <select class="f-amb">${[[0, t.privExact], [1, t.privAbout.replace('{dist}', '200 m')], [2, t.privAbout.replace('{dist}', '2 km')], [3, t.privAbout.replace('{dist}', '20 km')], [4, t.privAbout.replace('{dist}', '110 km')]].map(([v, l]) => `<option value="${v}" ${(st.position_ambiguity || 0) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+          <label class="field check"><input type="checkbox" class="f-motion" ${st.send_motion !== false ? 'checked' : ''}> ${t.privMotion}</label>
+          <label class="field check"><input type="checkbox" class="f-alt" ${st.send_altitude !== false ? 'checked' : ''}> ${t.privAltitude}</label>
+          <div class="hint">${t.privHint}</div>
+        </div>
         <div class="card"><h2>${t.aprsis}</h2>
           <label class="field check"><input type="checkbox" class="f-is" ${st.aprsis_enabled ? 'checked' : ''}> ${t.aprsisOn}</label>
           <label class="field f-licence-box" hidden>${t.licenceAsk} <b>${t.licenceText}</b>
@@ -841,6 +854,7 @@ class AprsKissPanel extends HTMLElement {
         aprsis_enabled: q('.f-is').checked, aprsis_host: q('.f-host').value.trim(), aprsis_port: Number(q('.f-port').value) || 14580,
         aprsis_passcode: q('.f-pass').value.trim(), aprsis_radius_km: Number(q('.f-radius').value) || 0,
         igate_rx: q('.f-irx').checked, igate_tx: q('.f-itx').checked,
+        position_ambiguity: Number(q('.f-amb').value) || 0, send_motion: q('.f-motion').checked, send_altitude: q('.f-alt').checked,
         digi_mode: q('.f-digi').value, digi_max_hops: Number(q('.f-digi-hops').value) || 2, digi_aliases: q('.f-digi-alias').value.trim().toUpperCase(),
         gps_source: q('.f-gps').value, gps_device: q('.f-gps').value === 'usb' ? q('.f-gps-device').value : (st.gps_device || ''),
         gps_baudrate: Number(q('.f-gps-baud').value) || 0,
