@@ -10,6 +10,7 @@ conversation. Sent by radio like any message: an iGate in range passes it on.
 - UTC: "TIME" → the exact time.
 - 9M2PJU-4: "satpass iss" (passes of a satellite over us), "riseset" (sun and moon), "whereami", "help".
 - MAILMY (9M2PJU): "EMAIL <address> <text>", ended by "SEND" → an e-mail; 5 an hour.
+- WLNK-1 (Winlink APRSLink): Winlink e-mail; log in first (see winlink.py), then L, R1, SP … /EX.
 """
 
 from __future__ import annotations
@@ -31,4 +32,5 @@ SERVICES = (
     Service("UTC", "svc_utc", ("TIME",)),
     Service("9M2PJU-4", "svc_sat", ("satpass iss", "riseset", "whereami", "help")),
     Service("MAILMY", "svc_mail", ("EMAIL ", "SEND")),
+    Service("WLNK-1", "svc_winlink", ("L", "R1", "Y1", "K1", "SP ", "SMS ", "/EX", "?")),
 )

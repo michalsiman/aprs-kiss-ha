@@ -115,3 +115,21 @@ def resolve_callsign(call: str, heard: dict) -> str | None:
         if c.upper().split("-")[0] == call and placed(c) and (e.get("last_heard") or 0) > when:
             best, when = c, e.get("last_heard") or 0
     return best
+
+
+def place_links(lat: float, lon: float, label: str = "") -> dict[str, str]:
+    """Ways to hand a place to other apps: "geo" (Android: any map or navigation app – Google Maps,
+    Mapy.com, Waze, OsmAnd – the system asks which), "apple" (iPhone: Apple Maps, navigating there),
+    "osm" (a web page with the place), "text" (to share: the label, the coordinates, the locator, the link)."""
+    from urllib.parse import quote  # noqa: PLC0415
+
+    ll = f"{lat:.5f},{lon:.5f}"
+    name = quote(label.replace("(", " ").replace(")", " ").strip()) if label else ""
+    osm = f"https://www.openstreetmap.org/?mlat={lat:.5f}&mlon={lon:.5f}#map=16/{lat:.5f}/{lon:.5f}"
+    head = f"{label}: " if label else ""
+    return {
+        "geo": f"geo:{ll}?q={ll}" + (f"({name})" if name else ""),
+        "apple": f"https://maps.apple.com/?daddr={ll}" + (f"&q={name}" if name else ""),
+        "osm": osm,
+        "text": f"{head}{lat:.5f}, {lon:.5f} ({position_to_locator(lat, lon)})\n{osm}",
+    }

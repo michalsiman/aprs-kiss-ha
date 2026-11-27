@@ -11,7 +11,7 @@ KEEP = (
     "from", "to", "via", "format", "latitude", "longitude", "symbol", "symbol_table", "comment",
     "speed", "course", "altitude", "posambiguity", "messagecapable", "status", "addresse",
     "message_text", "msgNo", "response", "object_name", "alive", "weather", "telemetry", "mbits",
-    "mtype", "timestamp", "raw_timestamp", "text",
+    "mtype", "timestamp", "raw_timestamp", "text", "bid", "aid", "identifier",
 )
 
 

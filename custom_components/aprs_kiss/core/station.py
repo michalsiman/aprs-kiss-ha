@@ -208,6 +208,11 @@ class Station:
                 entry[k] = packet[k]
         if packet.get("latitude") is not None and packet.get("longitude") is not None:
             _track(entry, now, packet["latitude"], packet["longitude"])
+            # a Mic-E position says a status ("000" = EMERGENCY); another kind of position ends it
+            if packet.get("format") == "mic-e" and packet.get("mbits"):
+                entry["mic_e"] = packet["mbits"]
+            else:
+                entry.pop("mic_e", None)
         weather = packet.get("weather")
         if isinstance(weather, dict):
             weather = dict(weather)
@@ -267,7 +272,7 @@ class Station:
         if len(self._tx_times) >= MAX_TX_PER_10_MIN:
             raise TransmitRefused(f"Transmit limit reached ({MAX_TX_PER_10_MIN} frames per 10 minutes)")
 
-    async def send_info(self, info: str, rf: bool = True, to_is: bool = True) -> None:
+    async def send_info(self, info: str, rf: bool = True, to_is: bool = True, dest: str | None = None) -> None:
         """Send one APRS information field from our callsign: on RF (over the configured
         path) while transmitting is on, and to APRS-IS while connected. Third-party
         packets from the internet go on RF only; acks to internet messages only to APRS-IS.
@@ -275,7 +280,7 @@ class Station:
         sent_is = False
         if to_is and self.send_is is not None:
             try:
-                sent_is = await self.send_is(info)
+                sent_is = await (self.send_is(info) if dest is None else self.send_is(info, dest))
             except (OSError, ConnectionError) as err:
                 _LOGGER.debug("Not sent to APRS-IS: %s", err)
         if not rf or not self.tx_enabled:
@@ -290,7 +295,9 @@ class Station:
             self._check_limit(now)
             if self._tx_times and now - self._tx_times[-1] < MIN_TX_GAP:
                 await asyncio.sleep(MIN_TX_GAP - (now - self._tx_times[-1]))
-            frame = Frame(Address.parse(aprs.TOCALL), self.me, list(self._path), info.encode("latin-1", "replace"))
+            # dest: Mic-E carries the position in the destination address; else our software's TOCALL
+            frame = Frame(Address.parse(dest or aprs.TOCALL), self.me, list(self._path),
+                          info.encode("latin-1", "replace"))
             await self._send_frame(frame.encode())
             self._tx_times.append(time.monotonic())
             self.stats["sent"] += 1
@@ -342,9 +349,9 @@ class Station:
         self._on_update()
 
     async def send_position(self, lat: float, lon: float, comment: str | None = None,
-                            rf: bool = True, to_is: bool = True) -> None:
-        await self.send_info(aprs.position(lat, lon, self.config.symbol, self.config.comment if comment is None else comment),
-                             rf=rf, to_is=to_is)
+                            rf: bool = True, to_is: bool = True, ambiguity: int = 0) -> None:
+        await self.send_info(aprs.position(lat, lon, self.config.symbol, self.config.comment if comment is None else comment,
+                                           ambiguity=ambiguity), rf=rf, to_is=to_is)
 
     async def send_status(self, text: str) -> None:
         await self.send_info(aprs.status(text))

@@ -29,7 +29,9 @@ from pathlib import Path
 from typing import Any
 
 from . import aprs as aprs_build
+from . import direwolf
 from . import thursday
+from . import bulletins as bln
 from .aprsis import AprsIsClient, gate_to_is, passcode, third_party
 from .ax25 import PF, U_DM, Address, Frame, frequency_command
 from .bbs import BbsConfigError, BbsServer
@@ -42,6 +44,7 @@ from .config import MIN_BEACON_MINUTES, VERSION, Config, data_dir, load_state, s
 from .connection import KissConnection, TncSettings
 from .parser import parse
 from .session import CONNECT_ATTEMPTS, CONNECTED, DISCONNECTED, Session
+from .station import VIA as STATION_VIA
 from .station import Station, StationConfig, TransmitRefused
 
 _LOGGER = logging.getLogger(__name__)
@@ -98,6 +101,8 @@ Listener = Callable[[str, dict[str, Any]], None]
 
 __all__ = ["Engine", "TransmitRefused"]
 
+RECENT_RF = 60  # packets heard by radio kept for the station server's display
+
 
 class Engine:
     """One TNC with one callsign."""
@@ -117,6 +122,9 @@ class Engine:
         self.thursday_joined = 0.0  # when we last sent a CQ to HOTG (0 = not in the group)
         self.thursday_cq = 0.0  # the last CQ, for the server's one-per-30-minutes rule
         self._thursday_recent: dict[str, float] = {}
+        self.recent_rf: deque[dict[str, Any]] = deque(maxlen=RECENT_RF)  # the last packets heard by radio
+        self.board = bln.Board()  # bulletins heard and our own still going out
+        self._bulletin_task: asyncio.Task | None = None
         self._chat_recent: dict[str, float] = {}
         self.sessions: dict[str, Session] = {}
         # file transfers (YAPP over a connected link): the newest last; who is sending or receiving now
@@ -193,8 +201,13 @@ class Engine:
         self.accept_incoming = (conf.accept_incoming or conf.files_accept) and not bbs
         self.igate_rx = conf.igate_rx and not bbs
         self.igate_tx = conf.igate_tx and not bbs
+        if conf.connection == "direwolf":  # the sound-card modem: started by the connection, stopped with us
+            direwolf.MODEM.configure(direwolf.find_binary(conf.direwolf_path) or "",
+                                     direwolf.make_config(conf.callsign, conf.direwolf_adevice, conf.direwolf_ptt,
+                                                          conf.direwolf_port), self._folder)
         self.connection = KissConnection(
-            TncSettings(kind=conf.connection, host=conf.host, port=int(conf.port), device=conf.device,
+            TncSettings(kind=conf.connection, host=conf.host,
+                        port=int(conf.direwolf_port if conf.connection == "direwolf" else conf.port), device=conf.device,
                         baudrate=int(conf.baudrate), txdelay_ms=conf.txdelay_ms or None),
             self._on_frame,
             self._on_connection_state,
@@ -231,7 +244,9 @@ class Engine:
         if radius <= 0 or here is None:
             return ""
         self._is_center = here
-        return f"r/{here[0]:.3f}/{here[1]:.3f}/{radius}"
+        # g/BLN*: the bulletins too (they carry no position, the area alone leaves them out); the board
+        # shows only those from stations within its distance
+        return f"r/{here[0]:.3f}/{here[1]:.3f}/{radius} g/BLN*"
 
     def set_is_radius(self, km: int) -> None:
         """Chosen on the map: the server is asked for the new area at once (no reconnecting)."""
@@ -298,12 +313,14 @@ class Engine:
         return (conf.latitude, conf.longitude) if conf.has_position else None
 
     def _position_comment(self, comment: str) -> str:
-        """APRS altitude extension (/A=feet) when the GPS knows it."""
+        """Course and speed, and the APRS altitude extension (/A=feet), when the GPS knows them and the
+        privacy settings let them out."""
         fix = self.gps_fix()
         if not fix:
             return comment
-        moving = course_speed(fix.course, fix.speed_kmh)  # "088/036": where we head and how fast
-        if fix.altitude_m is not None:
+        conf = self.config
+        moving = course_speed(fix.course, fix.speed_kmh) if conf.send_motion else ""  # "088/036"
+        if fix.altitude_m is not None and conf.send_altitude:
             comment = f"/A={max(0, round(fix.altitude_m / 0.3048)):06d} {comment}".rstrip()
         return moving + comment
 
@@ -499,6 +516,7 @@ class Engine:
                 self.thursday.extend(ordered)
             self.thursday_joined = float(stored.get("thursday_joined", 0) or 0)
             self.thursday_cq = float(stored.get("thursday_cq", 0) or 0)
+            self.board.load(stored.get("bulletins"))
             self._loaded = True
         self.running = True
         if not self.config.configured:
@@ -511,6 +529,7 @@ class Engine:
             self._beacon_task = asyncio.create_task(self._beacon_loop(), name="aprs_kiss_beacon")
         if not self.exclusive_mode:
             self._tracker_task = asyncio.create_task(self._tracker_loop(), name="aprs_kiss_tracker")
+            self._bulletin_task = asyncio.create_task(self._bulletin_loop(), name="aprs_kiss_bulletins")
         if self.bbs:
             self._bbs_task = asyncio.create_task(self._bbs_loop(), name="aprs_kiss_bbs")
         if self.gps:
@@ -550,6 +569,11 @@ class Engine:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._beacon_task
             self._beacon_task = None
+        if self._bulletin_task:
+            self._bulletin_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._bulletin_task
+            self._bulletin_task = None
         if self._tracker_task:
             self._tracker_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -561,6 +585,7 @@ class Engine:
         if self.aprsis:
             await self.aprsis.stop()
         await self.connection.stop()
+        await direwolf.MODEM.stop()  # after the link: nothing restarts it then; nothing when it does not run
         await self.save()
 
     async def reconfigure(self, config: Config) -> None:
@@ -581,7 +606,7 @@ class Engine:
 
     def _state(self) -> dict[str, Any]:
         return {"msg_counter": self._msg_counter, "messages": list(self.messages), "thursday": list(self.thursday),
-                "thursday_joined": self.thursday_joined, "thursday_cq": self.thursday_cq}
+                "thursday_joined": self.thursday_joined, "thursday_cq": self.thursday_cq, "bulletins": self.board.state()}
 
     def _schedule_save(self) -> None:
         if self._save_handle:
@@ -713,7 +738,9 @@ class Engine:
         self._emit("monitor", {"line": entry})
 
     def _on_packet(self, packet: dict[str, Any]) -> None:
+        self.recent_rf.append(packet)
         self._emit("packet", packet)
+        self._bulletin_in(packet, "radio")
         if self.igate_rx and self.aprsis and self.aprsis.verified:
             src, _, rest = packet["raw"].partition(">")
             dst = rest.split(",", 1)[0].split(":", 1)[0]
@@ -730,10 +757,10 @@ class Engine:
 
     # ─── APRS-IS ──────────────────────────────────────────────────────────
 
-    async def _send_own_to_is(self, info: str) -> bool:
+    async def _send_own_to_is(self, info: str, dest: str | None = None) -> bool:
         if not self.aprsis or not self.aprsis.verified:
             return False
-        line = f"{self.me}>{aprs_build.TOCALL},TCPIP*:{info}"
+        line = f"{self.me}>{dest or aprs_build.TOCALL},TCPIP*:{info}"
         sent = await self.aprsis.send(line)
         if sent:
             self._monitor(f"[IS] {line}", outgoing=True)
@@ -751,6 +778,8 @@ class Engine:
         head = line.partition(":")[0]
         packet["path"] = head.split(",")[1:] or ["TCPIP"]
         src = packet.get("from", "")
+        if packet.get("format") != "message" or (packet.get("addresse") or "").upper().startswith("NWS"):
+            self._bulletin_in(packet, "internet")
         if self.station.handle_is_packet(packet):
             self.igate_stats["is_messages"] += 1
             return
@@ -794,8 +823,7 @@ class Engine:
             _LOGGER.debug("Beacon not sent: no position set")
             return False
         try:
-            await self.station.send_position(*position, self._position_comment(self.config.comment),
-                                             to_is=self.config.beacon_is)
+            await self._send_own_position(*position)
         except (TransmitRefused, ConnectionError) as err:
             _LOGGER.debug("Beacon not sent: %s", err)
             return False
@@ -859,10 +887,31 @@ class Engine:
         if lat is None or lon is None:
             if not position:
                 raise ValueError("No position set")
-            lat, lon = position
-            comment = self._position_comment(self.config.comment if comment is None else comment)
+            await self._send_own_position(*position, comment)
+            return
         # over the internet too only when chosen (Settings › APRS-IS), like the beacon and the tracker
         await self.station.send_position(lat, lon, comment, to_is=self.config.beacon_is)
+
+    async def _send_own_position(self, lat: float, lon: float, comment: str | None = None) -> None:
+        """Our position, as the settings say: plain, or Mic-E (shorter; with a status – EMERGENCY among them –
+        speed, course and altitude packed in). EMERGENCY always goes as Mic-E: that is where it lives."""
+        conf = self.config
+        text = conf.comment if comment is None else comment
+        # privacy: in an emergency the exact position, whatever the settings say – help has to find us
+        sos = conf.mic_e_status == "emergency"
+        ambiguity = 0 if sos else conf.position_ambiguity
+        if conf.mic_e or sos:
+            fix = self.gps_fix()
+            motion = fix is not None and (conf.send_motion or sos)
+            dest, info = aprs_build.mic_e(
+                lat, lon, conf.symbol, conf.mic_e_status,
+                course=fix.course if motion else None, speed_kmh=fix.speed_kmh if motion else None,
+                altitude_m=fix.altitude_m if fix and (conf.send_altitude or sos) else None, comment=text,
+                ambiguity=ambiguity)
+            await self.station.send_info(info, dest=dest, to_is=conf.beacon_is)
+            return
+        kwargs = {"ambiguity": ambiguity} if ambiguity else {}
+        await self.station.send_position(lat, lon, self._position_comment(text), to_is=conf.beacon_is, **kwargs)
 
     async def set_radio_frequency(self, mhz: float | None) -> None:
         """Tune a radio with a built-in KISS TNC (VR-N76, UV-PRO, GA-5WB, firmware 0.7.11+) to `mhz`, or (None)
@@ -904,6 +953,101 @@ class Engine:
         x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(lon2 - lon1)
         return {"km": round(distance_m(*here, there["latitude"], there["longitude"]) / 1000, 2),
                 "bearing": round(math.degrees(math.atan2(y, x)) % 360)}
+
+    # ─── bulletins ───────────────────────────────────────────────────────
+
+    def _bulletin_in(self, packet: dict[str, Any], via: str) -> None:
+        item = bln.from_packet(packet)
+        if not item or item["from"] == str(self.me).upper():
+            return
+        entry = self.board.add(item, packet.get("received_at") or time.time(), via,
+                               self._distance_to(item["from"]).get("km"))
+        if entry:
+            self._schedule_save()
+            self._emit("bulletin", {"entry": entry})
+
+    def bulletins_shown(self) -> list[dict[str, Any]]:
+        """The bulletins within the board's distance (Settings: bulletin_km), newest first; the distance
+        looked up again (the sender's position may have come after its bulletin)."""
+        limit = int(self.config.bulletin_km or 0)
+        out = []
+        for e in sorted(self.board.heard, key=lambda e: e.get("time", 0), reverse=True):
+            km = self._distance_to(e["from"]).get("km")
+            if km is not None:
+                e["km"] = km
+            if self.board.shown(e, limit):
+                out.append(e)
+        return out
+
+    def bulletins_unread(self) -> int:
+        return sum(1 for e in self.bulletins_shown() if not e.get("read"))
+
+    def bulletins_read(self) -> None:
+        if self.board.mark_read():
+            self._schedule_save()
+
+    async def send_bulletin(self, line: str, group: str, text: str, via: str = "both",
+                            hours: float | None = None) -> dict[str, Any]:
+        """Our bulletin (line 0–9) or announcement (A–Z): sent now, then repeated – often at first, then
+        every 20 minutes (an announcement every hour) – for `hours`."""
+        self._not_in_bbs_mode()
+        if self.exclusive_mode:
+            raise TransmitRefused("Not in this mode")
+        addr = bln.addressee(line, group)
+        kind = bln.kind_of(addr)
+        hours = hours or bln.DEFAULT_HOURS["announcement" if kind == "announcement" else "bulletin"]
+        now = time.time()
+        old = [m for m in self.board.mine if m["addressee"] == addr]
+        entry = self.board.start(addr, text, via, hours, now)
+        try:
+            await self.station.send_info(aprs_build.message(addr, entry["text"], None), **STATION_VIA[via])
+        except Exception:
+            self.board.stop(addr)
+            self.board.mine.extend(old)
+            raise
+        self.board.sent(entry, now)
+        self._schedule_save()
+        self._emit("bulletin", {"mine": entry})
+        self._on_update()
+        return entry
+
+    def stop_bulletin(self, addr: str) -> None:
+        self.board.stop(addr)
+        self._schedule_save()
+        self._emit("bulletin", {})
+        self._on_update()
+
+    def delete_bulletin(self, sender: str, addr: str) -> None:
+        self.board.remove(sender, addr)
+        self._schedule_save()
+        self._emit("bulletin", {})
+
+    async def bulletin_tick(self, now: float | None = None) -> int:
+        """Our bulletins that are due go out; old ones leave the board. Returns how many were sent."""
+        now = time.time() if now is None else now
+        sent = 0
+        for entry in self.board.due(now):
+            try:
+                await self.station.send_info(aprs_build.message(entry["addressee"], entry["text"], None),
+                                             **STATION_VIA.get(entry.get("via"), STATION_VIA["both"]))
+            except (TransmitRefused, ConnectionError) as err:
+                _LOGGER.debug("Bulletin %s not sent: %s", entry["addressee"], err)
+                self.board.failed(entry, now)
+                continue
+            self.board.sent(entry, now)
+            sent += 1
+        if self.board.expire(now) or sent:
+            self._schedule_save()
+            self._emit("bulletin", {})
+        return sent
+
+    async def _bulletin_loop(self) -> None:
+        while True:
+            await asyncio.sleep(15)
+            try:
+                await self.bulletin_tick()
+            except Exception:  # noqa: BLE001 - the loop keeps going
+                _LOGGER.exception("Bulletins")
 
     # ─── #APRSThursday ────────────────────────────────────────────────────
 

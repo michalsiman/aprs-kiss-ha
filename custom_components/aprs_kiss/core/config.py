@@ -14,13 +14,13 @@ from typing import Any
 
 from .aprsis import DEFAULT_PORT as DEFAULT_APRSIS_PORT
 from .aprsis import DEFAULT_SERVER as DEFAULT_APRSIS_HOST
-from . import mapfilter, profiles, roadalert
+from . import aprs, mapfilter, profiles, roadalert
 from .ax25 import Address
 
 _LOGGER = logging.getLogger(__name__)
 
 APP_NAME = "aprs-kiss"
-VERSION = "1.6.0"
+VERSION = "1.9.0"
 # A beta (a pre-release on GitHub, tag vX.Y.Z-beta): betas take the next patch numbers (1.0.1, 1.0.2 …),
 # the next stable release a higher minor one (1.1.0), so updating always goes up.
 BETA = False
@@ -33,7 +33,11 @@ class Config:
     """Everything the user can set. Field names match the Home Assistant integration."""
 
     # TNC
-    connection: str = "tcp"  # a transport registered in connection.py
+    connection: str = "tcp"  # a transport registered in connection.py ("direwolf": the sound-card modem)
+    direwolf_adevice: str = ""  # Direwolf's ADEVICE ("plughw:1,0"); "" = the system's default sound card
+    direwolf_ptt: str = ""  # "" = VOX, "CM108" (the sound card's GPIO), "RTS:/dev/ttyUSB0", "DTR:COM3"
+    direwolf_port: int = 8101  # the KISS port of the Direwolf the app starts
+    direwolf_path: str = ""  # Direwolf's program; "" = found by itself
     host: str = "127.0.0.1"
     port: int = 8001
     device: str = ""
@@ -88,10 +92,19 @@ class Config:
     units_distance: str = ""  # "km", "mi"; "" = as the phone / computer is set (miles in the US and the UK)
     units_temperature: str = ""  # "C", "F"; "" = as the phone / computer is set (Fahrenheit in the US)
     units_pressure: str = ""  # "hPa", "inHg"; "" = as the phone / computer is set (inHg in the US)
+    mic_e: bool = False  # our position as Mic-E (shorter on air, with a status)
+    mic_e_status: str = "en_route"  # the Mic-E status: off_duty … priority, "emergency" (always sent as Mic-E)
+    position_ambiguity: int = 0  # privacy: our position less exact (0 exact; 1 ≈ 200 m, 2 ≈ 2 km, 3 ≈ 20 km, 4 ≈ 110 km)
+    send_motion: bool = True  # privacy: speed and course go out with the position
+    send_altitude: bool = True  # privacy: the altitude goes out with the position
+    bulletin_km: int = 150  # the Bulletins screen: bulletins from stations this far (0 = all); heard by radio always
+    winlink_password: str = ""  # Winlink (APRSLink, WLNK-1): only characters of it go on air, never the password
+    stations_sort: str = "time"  # the Stations list: "time" (last heard first), "distance" (nearest first), "call"
     map_count: bool = True  # under the map's buttons: how many stations are on the map
     map_weather: bool = True  # the map's corner shows the temperature from the weather stations around us
     map_filters: str = ""  # the map shows only these kinds of stations ("weather,moving,road"); empty = all
     map_tools_hidden: bool = False  # the map's button bar folded into one gear button
+    map_online: str = "osm"  # the online map: "osm" (OpenStreetMap) or "otm" (OpenTopoMap: contours, hill shading)
     map_offline: bool = False  # the bundled offline map (borders, cities) instead of OpenStreetMap tiles
     gps_source: str = "manual"  # "manual" (latitude/longitude above), "usb" (an NMEA GPS module), "phone"
     gps_device: str = ""  # its serial port
@@ -117,12 +130,14 @@ class Config:
     keep_screen_on: str = "never"  # "never", "tak" (while TAK runs) or "always": the screen does not go dark
     sound_tx: bool = False  # a short beep whenever the radio transmits
     sound_messages: bool = True  # a sound for a new APRS message
-    thursday_via: str = ""  # the same for APRS Thursday; "" = internet
+    thursday_via: str = ""
+    bulletin_via: str = ""  # the same for our bulletins  # the same for APRS Thursday; "" = internet
     message_via: str = ""  # how messages go: "radio", "internet", "both"; "" = by the APRS-IS switch (beacon_is)
     sound_chat: bool = True  # … for a new packet chat line
     sound_tak: bool = True  # … for a new TAK GeoChat message
     sound_road: bool = True  # … for a road incident ahead (tracker)
     sound_meet: bool = True  # … for a moving station ahead (tracker)
+    menu_hidden: bool = False  # a computer: the menu hidden behind ☰, sliding in from the side as on a phone
     theme: str = "auto"  # auto (as the desktop), light, dark
 
     @property
@@ -166,6 +181,14 @@ class Config:
             self.tracker_mode = "fixed"
         self.map_filters = mapfilter.join(mapfilter.parse(self.map_filters))
         self.map_rf_km = max(0, int(self.map_rf_km or 0))
+        if self.map_online not in ("osm", "otm"):
+            self.map_online = "osm"
+        if self.mic_e_status not in aprs.MIC_E_STATUS:
+            self.mic_e_status = "en_route"
+        self.position_ambiguity = min(4, max(0, int(self.position_ambiguity or 0)))
+        self.bulletin_km = max(0, int(self.bulletin_km or 0))
+        if self.stations_sort not in ("time", "distance", "call"):
+            self.stations_sort = "time"
         if self.units_distance not in ("", "km", "mi"):
             self.units_distance = ""
         if self.units_temperature not in ("", "C", "F"):
@@ -179,6 +202,9 @@ class Config:
         self.tracker_still_minutes = min(120, max(5, int(self.tracker_still_minutes or 60)))
         if self.road_alert_km not in roadalert.DISTANCES_KM:
             self.road_alert_km = 5
+        self.direwolf_port = int(self.direwolf_port or 8101)
+        if not 0 < self.direwolf_port < 65536:
+            raise ValueError("Port out of range")
         if self.connection == "tcp" and not (0 < int(self.port) < 65536):
             raise ValueError("Invalid TCP port")
         return self  # licence_confirmed stays when APRS-IS is switched off: the sentence is typed once
