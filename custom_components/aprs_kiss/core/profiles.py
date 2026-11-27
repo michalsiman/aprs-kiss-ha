@@ -3,7 +3,9 @@ OK1ABC-7 a handheld, OK1ABC a house). One is active: everything goes out under i
 messages, terminal, chat, …). The active one is also in `callsign` and `symbol`, so the rest of the
 app does not need to know about profiles.
 
-Stored in Config.profiles as JSON: [{"ssid": 9, "symbol": "/>"}, …], the active one in Config.profile.
+Stored in Config.profiles as JSON: [{"ssid": 9, "symbol": "/>", "comment": "…"}, …], the active one in
+Config.profile. Each profile has its own position comment and tracker way (fixed interval or SmartBeaconing,
+how we move); settings saved before start with what was in use then.
 """
 
 from __future__ import annotations
@@ -16,6 +18,12 @@ if TYPE_CHECKING:
     from .config import Config
 
 MAX = 3
+COMMENT_MAX = 43
+# what each profile has of its own besides the SSID and symbol (the tracker's interval when standing
+# still stays one for all): the position comment, fixed interval or SmartBeaconing, and how we move
+OWN = ("comment", "tracker_mode", "tracker_minutes", "tracker_profile")
+TRACKER_MODES = ("fixed", "smart")
+MOVING = ("walk", "bike", "car")
 
 
 def split_call(callsign: str) -> tuple[str, int]:
@@ -45,14 +53,24 @@ def load(conf: Config) -> list[dict[str, Any]]:
             continue
         if 0 <= ssid <= 15 and ssid not in seen and len(symbol) == 2:
             seen.add(ssid)
-            out.append({"ssid": ssid, "symbol": symbol})
+            item = {"ssid": ssid, "symbol": symbol}
+            if isinstance(p.get("comment"), str):
+                item["comment"] = p["comment"][:COMMENT_MAX]
+            if p.get("tracker_mode") in TRACKER_MODES:
+                item["tracker_mode"] = p["tracker_mode"]
+            if isinstance(p.get("tracker_minutes"), int) and 1 <= p["tracker_minutes"] <= 60:
+                item["tracker_minutes"] = p["tracker_minutes"]
+            if p.get("tracker_profile") in MOVING:
+                item["tracker_profile"] = p["tracker_profile"]
+            out.append(item)
     if not out:
         out = [{"ssid": split_call(conf.callsign)[1], "symbol": conf.symbol or "/-"}]
     return out[:MAX]
 
 
 def dump(items: list[dict[str, Any]]) -> str:
-    return json.dumps([{"ssid": int(p["ssid"]), "symbol": p["symbol"]} for p in items[:MAX]])
+    return json.dumps([{"ssid": int(p["ssid"]), "symbol": p["symbol"], **{k: p[k] for k in OWN if k in p}}
+                       for p in items[:MAX]], ensure_ascii=False)
 
 
 def normalize(conf: Config) -> None:
@@ -63,9 +81,18 @@ def normalize(conf: Config) -> None:
     if len(items) == 1 and not conf.profiles:
         return  # nobody made profiles: the settings as they are
     base, _ssid = split_call(conf.callsign)
+    current = {"comment": (conf.comment or "")[:COMMENT_MAX],
+               "tracker_mode": conf.tracker_mode if conf.tracker_mode in TRACKER_MODES else "fixed",
+               "tracker_minutes": min(60, max(1, int(conf.tracker_minutes or 2))),
+               "tracker_profile": conf.tracker_profile if conf.tracker_profile in MOVING else "car"}
+    for p in items:  # older settings: every profile starts with what was used so far
+        for k in OWN:
+            p.setdefault(k, current[k])
     active = items[conf.profile]
     conf.callsign = full_call(base, active["ssid"])
     conf.symbol = active["symbol"]
+    for k in OWN:
+        setattr(conf, k, active[k])
     conf.profiles = dump(items)
 
 

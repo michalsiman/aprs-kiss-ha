@@ -9,6 +9,7 @@
 - **Digipeater** (fill-in or wide, aliases), **USB GPS** (NMEA) as our position, **#APRSThursday** tab, **BBS SERVER** and **TAK** modes (each instead of APRS, switched on with a safety sentence).
 - **Spot** (APRS tab): self-spotting a SOTA, POTA, WWFF, SIOTA, GMA, WCA, IOTA or lighthouse activation through APRS2SOTA, Camilla (DL0QW-12) or APSPOT, checked and shown before it goes – the same as in the app.
 - **Services** (APRS tab): FIND, REPEAT, WXNOW, UTC, satellite passes (9M2PJU-4) and e-mail (MAILMY), one click puts the command in the message line.
+- Core synced with the app's 1.7.0: each weather station keeps the time of its weather report (not just of its last packet), callsigns and web links are found in message texts, and the app's units (km or miles, °C or °F, hPa or inHg) and weather-around-you helpers are in the core for the panel to use.
 - A serial TNC that is not there or does not answer is said plainly (not there, not answering, not allowed – the dialout group) instead of a bare "Could not configure port".
 
 ## [0.3.8] - 2026-11-22

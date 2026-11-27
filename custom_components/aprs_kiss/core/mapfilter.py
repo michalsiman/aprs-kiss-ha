@@ -8,6 +8,9 @@
   mostly objects put on APRS-IS by traffic-info gateways.
 
 A station is shown when it is any of the chosen kinds. No kind chosen: all stations.
+
+And how far (in_reach): stations heard on the radio up to RF_KM (0 = no limit, the default); stations
+only from the internet up to the APRS-IS radius (the server is asked for that area too).
 """
 
 from __future__ import annotations
@@ -15,10 +18,13 @@ from __future__ import annotations
 from typing import Any
 
 from .repeater import is_repeater
+from .tracker import distance_m
 
 KINDS = ("weather", "moving", "repeater", "road")
 MOVING_SECONDS = 10 * 60
 MOVING_KMH = 3.0  # a reported speed above this, lately: it moves
+IS_KM = (20, 50, 100)  # the map's choices for the APRS-IS radius
+RF_KM = (20, 50, 100, 0)  # …and for stations heard on the radio (0 = no limit)
 
 # symbol codes (alternate table, also with an overlay character)
 ROAD_ALTERNATE = set("'!jw{*eB")
@@ -68,3 +74,12 @@ def shown(entry: dict[str, Any], kinds: set[str], now: float) -> bool:
             or ("road" in kinds and is_road(entry))
             or ("repeater" in kinds and is_repeater(entry))
             or ("moving" in kinds and is_moving(entry, now)))
+
+
+def in_reach(entry: dict[str, Any], here: tuple[float, float] | None, is_km: int, rf_km: int) -> bool:
+    """Near enough to show: radio stations within rf_km, internet-only ones within is_km (0 = no limit).
+    Where we are not known: all."""
+    limit = rf_km if entry.get("last_rf") else is_km
+    if not limit or here is None or entry.get("latitude") is None or entry.get("longitude") is None:
+        return True
+    return distance_m(here[0], here[1], entry["latitude"], entry["longitude"]) <= limit * 1000

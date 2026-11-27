@@ -218,6 +218,7 @@ class Station:
             if packet.get("speed") is not None:
                 weather.setdefault("wind_speed", round(packet["speed"] / 1.852 * 0.44704, 2))
             entry["weather"] = weather
+            entry["weather_at"] = now  # the weather report itself: a station may also send other packets
             entry.pop("speed", None)
             entry.pop("course", None)
         self.heard[call] = entry

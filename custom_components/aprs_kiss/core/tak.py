@@ -17,6 +17,8 @@ import uuid as uuidlib
 from dataclasses import dataclass, field
 from xml.sax.saxutils import escape, quoteattr
 
+from . import units
+
 MESH_HEADER = b"\xbf\x01\xbf"
 DESTINATION = "TAK"  # AX.25 destination of TAK frames
 MAX_PAYLOAD = 220  # one event per frame: AX.25 N1 is 256, but LoRa KISS modems (MeshCore) carry 255 bytes with the header
@@ -279,7 +281,7 @@ def describe(ev: TakEvent) -> str:
         return f"TAK GeoChat {c.get('sender') or ev.uid} → {c.get('to') or 'All'}: {c.get('text', '')}"
     who = ev.callsign or ev.uid
     team = ", ".join(x for x in (ev.team, ev.role) if x)
-    speed = f" {ev.speed * 3.6:.0f} km/h" if ev.speed else ""
+    speed = f" {units.current.speed(ev.speed * 3.6)}" if ev.speed else ""
     kind = "PLI" if ev.type.startswith("a-") else ev.type
     return f"TAK {kind} {who}{f' ({team})' if team else ''} {ev.lat:.5f} {ev.lon:.5f}{speed}"
 

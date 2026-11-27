@@ -20,7 +20,7 @@ from .ax25 import Address
 _LOGGER = logging.getLogger(__name__)
 
 APP_NAME = "aprs-kiss"
-VERSION = "1.1.0"
+VERSION = "1.6.0"
 # A beta (a pre-release on GitHub, tag vX.Y.Z-beta): betas take the next patch numbers (1.0.1, 1.0.2 …),
 # the next stable release a higher minor one (1.1.0), so updating always goes up.
 BETA = False
@@ -56,6 +56,7 @@ class Config:
     tracker_profile: str = "car"  # smart: walk, bike or car
     tracker_still_minutes: int = 60  # smart: standing still, once in this many minutes
     offer_tracker: bool = True  # phone: you seem to be driving with the tracker off - offer to switch it on
+    offer_tracker_skip_day: str = ""  # …but not on this day ("2026-11-27"): "Not today" was tapped
     road_alerts: bool = False  # while the tracker runs: warn about road incidents ahead…
     meet_alerts: bool = False  # …and about other moving stations ahead…
     road_alert_km: int = 5  # …this far
@@ -83,6 +84,12 @@ class Config:
     map_files: str = ""  # imported offline maps (MBTiles, PMTiles, …), one path per line
     map_imported: bool = True  # offline: the imported map (when there is one) over the bundled one
     spot_last: str = ""  # Messages › Spot: the last spot (JSON: program, reference, frequency, mode, gateway)
+    map_rf_km: int = 0  # the map shows stations heard on the radio this far (0 = no limit)
+    units_distance: str = ""  # "km", "mi"; "" = as the phone / computer is set (miles in the US and the UK)
+    units_temperature: str = ""  # "C", "F"; "" = as the phone / computer is set (Fahrenheit in the US)
+    units_pressure: str = ""  # "hPa", "inHg"; "" = as the phone / computer is set (inHg in the US)
+    map_count: bool = True  # under the map's buttons: how many stations are on the map
+    map_weather: bool = True  # the map's corner shows the temperature from the weather stations around us
     map_filters: str = ""  # the map shows only these kinds of stations ("weather,moving,road"); empty = all
     map_tools_hidden: bool = False  # the map's button bar folded into one gear button
     map_offline: bool = False  # the bundled offline map (borders, cities) instead of OpenStreetMap tiles
@@ -101,6 +108,7 @@ class Config:
     bbs_list: str = ""  # saved BBSes and nodes for the terminal: JSON [{"call": ..., "path": ...}]
     check_updates: bool = True
     update_beta: bool = False  # also offer beta versions (pre-releases on GitHub): for testers  # ask GitHub once a day whether a newer version is out
+    seen_version: str = ""  # the version whose changes were last shown (after an update: what is new)
     disclaimer_accepted: bool = False  # the first-start warning (transmitting needs a licence) was accepted
     language_asked: bool = False
     bbs_sentence_ok: bool = False  # the BBS SERVER sentence was typed once: not asked again
@@ -109,6 +117,8 @@ class Config:
     keep_screen_on: str = "never"  # "never", "tak" (while TAK runs) or "always": the screen does not go dark
     sound_tx: bool = False  # a short beep whenever the radio transmits
     sound_messages: bool = True  # a sound for a new APRS message
+    thursday_via: str = ""  # the same for APRS Thursday; "" = internet
+    message_via: str = ""  # how messages go: "radio", "internet", "both"; "" = by the APRS-IS switch (beacon_is)
     sound_chat: bool = True  # … for a new packet chat line
     sound_tak: bool = True  # … for a new TAK GeoChat message
     sound_road: bool = True  # … for a road incident ahead (tracker)
@@ -155,6 +165,13 @@ class Config:
         if self.tracker_mode not in ("fixed", "smart"):
             self.tracker_mode = "fixed"
         self.map_filters = mapfilter.join(mapfilter.parse(self.map_filters))
+        self.map_rf_km = max(0, int(self.map_rf_km or 0))
+        if self.units_distance not in ("", "km", "mi"):
+            self.units_distance = ""
+        if self.units_temperature not in ("", "C", "F"):
+            self.units_temperature = ""
+        if self.units_pressure not in ("", "hPa", "inHg"):
+            self.units_pressure = ""
         profiles.normalize(self)
         if self.tracker_profile not in ("walk", "bike", "car"):
             self.tracker_profile = "car"

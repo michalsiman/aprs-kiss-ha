@@ -81,3 +81,37 @@ def position_to_locator(lat: float, lon: float) -> str:
     lat = min(max(lat + 90, 0), 179.999999)
     return (chr(65 + int(lon // 20)) + chr(65 + int(lat // 10)) + str(int(lon % 20 // 2)) + str(int(lat % 10))
             + chr(97 + int(lon % 2 * 12)) + chr(97 + int(lat % 1 * 24))).upper()
+
+
+# A radio amateur's callsign, maybe with an SSID: a prefix with a letter (OK, G, 2E, 9A…), a digit, 1–4 letters.
+_CALL = re.compile(r"(?<![A-Z0-9/])((?:[A-Z]{1,2}|[0-9][A-Z]|[A-Z][0-9])[0-9][A-Z]{1,4}(?:-[0-9]{1,2})?)(?![A-Z0-9])",
+                   re.IGNORECASE)
+
+
+def find_callsigns(text: str) -> list[str]:
+    """The callsigns a text mentions ("OK6DJ-6 11/25 7.52km WSW" → ["OK6DJ-6"]), upper case, each once,
+    in the order they come."""
+    seen: list[str] = []
+    for m in _CALL.finditer(text or ""):
+        call = m.group(1).upper()
+        if call not in seen:
+            seen.append(call)
+    return seen
+
+
+def resolve_callsign(call: str, heard: dict) -> str | None:
+    """The heard station a mentioned callsign means, with a position: the callsign itself, or (said without
+    the SSID, "OK1FRN") the most recently heard station with that base; None when none is known."""
+    def placed(c: str) -> bool:
+        e = heard.get(c)
+        return bool(e) and e.get("latitude") is not None and e.get("longitude") is not None
+
+    if placed(call):
+        return call
+    if "-" in call:
+        return None
+    best, when = None, -1.0
+    for c, e in heard.items():
+        if c.upper().split("-")[0] == call and placed(c) and (e.get("last_heard") or 0) > when:
+            best, when = c, e.get("last_heard") or 0
+    return best

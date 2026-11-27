@@ -46,13 +46,25 @@ def compose(text: str) -> str:
     return PREFIX + " ".join(text.split())[:MAX_TEXT]
 
 
+RELAYED = f"N:{GROUP}"  # how ANSRVR passes on another member's message: "N:HOTG Hello from …"
+
+
+def _group_prefix(text: str) -> str | None:
+    up = text.strip().upper()
+    for prefix in (PREFIX.strip(), RELAYED):
+        if up.startswith(prefix) and (len(up) == len(prefix) or not up[len(prefix)].isalnum()):
+            return prefix
+    return None
+
+
 def is_group_text(text: str) -> bool:
-    """A HOTG message: one relayed from another station, or our own."""
-    return text.strip().upper().startswith(PREFIX.strip())
+    """A HOTG message: one relayed from another station ("N:HOTG …"), or our own ("CQ HOTG …")."""
+    return _group_prefix(text) is not None
 
 
 def strip_prefix(text: str) -> str:
-    return text.strip()[len(PREFIX.strip()):].strip() if is_group_text(text) else text.strip()
+    prefix = _group_prefix(text)
+    return text.strip()[len(prefix):].strip() if prefix else text.strip()
 
 
 def is_server(call: str) -> bool:

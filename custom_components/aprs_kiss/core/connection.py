@@ -16,7 +16,7 @@ import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
-from .ax25 import CMD_PERSISTENCE, CMD_TXDELAY, KissDecoder, kiss_frame
+from .ax25 import CMD_HARDWARE, CMD_PERSISTENCE, CMD_TXDELAY, KissDecoder, kiss_frame
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -193,6 +193,10 @@ class KissConnection:
             raise ConnectionError("KISS TNC is not connected")
         self._writer.write(data)
         await self._writer.drain()
+
+    async def send_hardware(self, payload: bytes) -> None:
+        """A KISS SetHardware command (the TNC's own, e.g. a radio's frequency)."""
+        await self._write(kiss_frame(payload, CMD_HARDWARE))
 
     async def send(self, ax25_frame: bytes) -> None:
         """Hand one AX.25 frame to the TNC for transmission."""

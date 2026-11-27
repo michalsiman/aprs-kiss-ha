@@ -31,7 +31,7 @@ from typing import Any
 from . import aprs as aprs_build
 from . import thursday
 from .aprsis import AprsIsClient, gate_to_is, passcode, third_party
-from .ax25 import PF, U_DM, Address, Frame
+from .ax25 import PF, U_DM, Address, Frame, frequency_command
 from .bbs import BbsConfigError, BbsServer
 from . import digipeater, tak, yapp
 from .tracker import Tracker, course_speed, distance_m
@@ -232,6 +232,12 @@ class Engine:
             return ""
         self._is_center = here
         return f"r/{here[0]:.3f}/{here[1]:.3f}/{radius}"
+
+    def set_is_radius(self, km: int) -> None:
+        """Chosen on the map: the server is asked for the new area at once (no reconnecting)."""
+        self.config.aprsis_radius_km = int(km)
+        if self.aprsis:
+            self.aprsis.set_filter(self._is_area())
 
     def _follow_is_area(self) -> None:
         """The GPS moved (or got its first fix): the APRS-IS area follows, past a tenth of its radius."""
@@ -480,8 +486,17 @@ class Engine:
         if not self._loaded:
             stored = await asyncio.to_thread(load_state, self._folder)
             self._msg_counter = int(stored.get("msg_counter", 0))
-            self.messages.extend(stored.get("messages", []))
             self.thursday.extend(stored.get("thursday", []))
+            for m in stored.get("messages", []):  # HOTG relays kept as messages by older versions: to Thursday
+                if m.get("direction") == "in" and thursday.is_group_text(m.get("text", "")):
+                    self.thursday.append({"time": m.get("time", 0), "from": m.get("from", ""), "kind": "in",
+                                          "text": thursday.strip_prefix(m.get("text", "")), "via": m.get("via")})
+                else:
+                    self.messages.append(m)
+            if len(self.thursday) > 1:
+                ordered = sorted(self.thursday, key=lambda e: e.get("time", 0))
+                self.thursday.clear()
+                self.thursday.extend(ordered)
             self.thursday_joined = float(stored.get("thursday_joined", 0) or 0)
             self.thursday_cq = float(stored.get("thursday_cq", 0) or 0)
             self._loaded = True
@@ -848,6 +863,17 @@ class Engine:
             comment = self._position_comment(self.config.comment if comment is None else comment)
         # over the internet too only when chosen (Settings › APRS-IS), like the beacon and the tracker
         await self.station.send_position(lat, lon, comment, to_is=self.config.beacon_is)
+
+    async def set_radio_frequency(self, mhz: float | None) -> None:
+        """Tune a radio with a built-in KISS TNC (VR-N76, UV-PRO, GA-5WB, firmware 0.7.11+) to `mhz`, or (None)
+        back to its own frequency. Radios without the command ignore it."""
+        self._not_in_bbs_mode()
+        hz = None
+        if mhz is not None:
+            if not 30 <= mhz <= 1300:
+                raise ValueError("frequency out of range")
+            hz = round(mhz * 1_000_000)
+        await self.connection.send_hardware(frequency_command(hz))
 
     async def send_status(self, text: str) -> None:
         self._not_in_bbs_mode()

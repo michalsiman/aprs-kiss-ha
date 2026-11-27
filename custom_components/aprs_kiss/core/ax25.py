@@ -21,6 +21,9 @@ TFESC = 0xDD
 CMD_DATA = 0x00
 CMD_TXDELAY = 0x01
 CMD_PERSISTENCE = 0x02
+CMD_HARDWARE = 0x06  # SetHardware: the TNC's own commands (github.com/islandmagic/kiss-tnc-hw-cmd)
+HW_SET_FREQUENCY = 0xEA  # + uint32 Hz, MSB first: VR-N76, UV-PRO, GA-5WB with firmware 0.7.11+
+HW_RESTORE_FREQUENCY = 0xEB  # back to the radio's own frequency
 
 CONTROL_UI = 0x03
 PID_NO_LAYER3 = 0xF0
@@ -52,6 +55,13 @@ def kiss_unescape(data: bytes) -> bytes:
         else:
             out.append(b)
     return bytes(out)
+
+
+def frequency_command(hz: int | None) -> bytes:
+    """The SetHardware payload that tunes the radio to `hz`, or (None) back to its own frequency."""
+    if hz is None:
+        return bytes((HW_RESTORE_FREQUENCY,))
+    return bytes((HW_SET_FREQUENCY,)) + int(hz).to_bytes(4, "big")
 
 
 def kiss_frame(payload: bytes, command: int = CMD_DATA, port: int = 0) -> bytes:
