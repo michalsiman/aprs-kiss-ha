@@ -45,6 +45,7 @@ from .connection import KissConnection, TncSettings
 from .parser import parse
 from .session import CONNECT_ATTEMPTS, CONNECTED, DISCONNECTED, Session
 from .station import VIA as STATION_VIA
+from . import telemetry
 from .station import Station, StationConfig, TransmitRefused
 
 _LOGGER = logging.getLogger(__name__)
@@ -134,6 +135,8 @@ class Engine:
         self.igate_stats = {"rf_to_is": 0, "is_to_rf": 0, "is_messages": 0}
         self.digi_dedupe = digipeater.Dedupe()
         self.digipeated = 0
+        self.telemetry = telemetry.Counter()
+        self._telemetry_task: asyncio.Task | None = None
         self._tasks: set[asyncio.Task] = set()
         self._beacon_task: asyncio.Task | None = None
         self._tracker_task: asyncio.Task | None = None
@@ -503,6 +506,7 @@ class Engine:
         if not self._loaded:
             stored = await asyncio.to_thread(load_state, self._folder)
             self._msg_counter = int(stored.get("msg_counter", 0))
+            self.telemetry.seq = int(stored.get("telemetry_seq", 0) or 0)
             self.thursday.extend(stored.get("thursday", []))
             for m in stored.get("messages", []):  # HOTG relays kept as messages by older versions: to Thursday
                 if m.get("direction") == "in" and thursday.is_group_text(m.get("text", "")):
@@ -530,6 +534,8 @@ class Engine:
         if not self.exclusive_mode:
             self._tracker_task = asyncio.create_task(self._tracker_loop(), name="aprs_kiss_tracker")
             self._bulletin_task = asyncio.create_task(self._bulletin_loop(), name="aprs_kiss_bulletins")
+            if self.config.telemetry_via:
+                self._telemetry_task = asyncio.create_task(self._telemetry_loop(), name="aprs_kiss_telemetry")
         if self.bbs:
             self._bbs_task = asyncio.create_task(self._bbs_loop(), name="aprs_kiss_bbs")
         if self.gps:
@@ -574,6 +580,11 @@ class Engine:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._bulletin_task
             self._bulletin_task = None
+        if self._telemetry_task:
+            self._telemetry_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._telemetry_task
+            self._telemetry_task = None
         if self._tracker_task:
             self._tracker_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -606,7 +617,8 @@ class Engine:
 
     def _state(self) -> dict[str, Any]:
         return {"msg_counter": self._msg_counter, "messages": list(self.messages), "thursday": list(self.thursday),
-                "thursday_joined": self.thursday_joined, "thursday_cq": self.thursday_cq, "bulletins": self.board.state()}
+                "thursday_joined": self.thursday_joined, "thursday_cq": self.thursday_cq, "bulletins": self.board.state(),
+                "telemetry_seq": self.telemetry.seq}
 
     def _schedule_save(self) -> None:
         if self._save_handle:
@@ -739,6 +751,7 @@ class Engine:
 
     def _on_packet(self, packet: dict[str, Any]) -> None:
         self.recent_rf.append(packet)
+        self._telemetry_heard(packet)
         self._emit("packet", packet)
         self._bulletin_in(packet, "radio")
         if self.igate_rx and self.aprsis and self.aprsis.verified:
@@ -1048,6 +1061,61 @@ class Engine:
                 await self.bulletin_tick()
             except Exception:  # noqa: BLE001 - the loop keeps going
                 _LOGGER.exception("Bulletins")
+
+    # ─── station telemetry ───────────────────────────────────────────────
+
+    def _telemetry_heard(self, packet: dict[str, Any]) -> None:
+        """The farthest station heard directly: its own position (not an object's), no digipeater used."""
+        if packet.get("object_name") or any(str(p).endswith("*") for p in packet.get("path", [])):
+            return
+        lat, lon, here = packet.get("latitude"), packet.get("longitude"), self.my_position()
+        if lat is None or lon is None or not here:
+            return
+        km = distance_m(*here, lat, lon) / 1000
+        if km < telemetry.MAX_KM:  # a position typed wrong is not a record
+            self.telemetry.heard_direct(km)
+
+    def _telemetry_totals(self) -> dict[str, int]:
+        return {"received": self.station.stats.get("received", 0), "digipeated": self.digipeated,
+                "rf_to_is": self.igate_stats["rf_to_is"], "is_to_rf": self.igate_stats["is_to_rf"]}
+
+    async def telemetry_tick(self) -> str | None:
+        """One report for the interval that just ended (with the definitions when they are due); the
+        T# line sent, or None when it could not go out."""
+        conf = self.config
+        via = STATION_VIA.get(conf.telemetry_via)
+        if not via or self.exclusive_mode:
+            return None
+        totals = self._telemetry_totals()
+        values = self.telemetry.values(totals)
+        bits = [conf.digi_mode != "off", bool(self.igate_rx or self.igate_tx),
+                bool(self.aprsis and self.aprsis.verified), self.station.tx_enabled]
+        line = telemetry.report(self.telemetry.seq, values, bits)
+        try:
+            if self.telemetry.due_definitions():
+                for info in telemetry.definitions(str(self.me)):
+                    await self.station.send_info(info, **via)
+            await self.station.send_info(line, **via)
+        except (TransmitRefused, ConnectionError) as err:
+            _LOGGER.debug("Telemetry not sent: %s", err)
+            return None
+        finally:
+            self.telemetry.start(totals)  # the next interval counts from now either way
+        self.telemetry.seq = (self.telemetry.seq + 1) % 1000
+        self.telemetry.sent += 1
+        self.telemetry.last = {"time": time.time(), "line": line, "values": values}
+        self._schedule_save()
+        self._on_update()
+        return line
+
+    async def _telemetry_loop(self) -> None:
+        self.telemetry.start(self._telemetry_totals())
+        while True:
+            await asyncio.sleep(int(self.config.telemetry_minutes or telemetry.DEFAULT_MINUTES) * 60)
+            try:
+                await self.telemetry_tick()
+            except Exception:  # noqa: BLE001 - the loop keeps going
+                _LOGGER.exception("Telemetry")
 
     # ─── #APRSThursday ────────────────────────────────────────────────────
 

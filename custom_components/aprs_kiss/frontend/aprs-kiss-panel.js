@@ -78,6 +78,8 @@ Object.assign(TEXTS.en, {
   blnDelete: 'Delete', blnSent: 'sent {n}×', blnNext: 'next in {m} min', blnUntil: 'until {t}', blnTimes: 'heard {n}×', blnNewTag: 'NEW',
   blnAnn: 'announcement', blnRadio: 'radio', blnNet: 'internet',
   blnAbout: 'Bulletins are APRS messages to everybody: BLN0–BLN9 news for the next few hours (a net tonight, a repeater down), BLNA–BLNZ announcements (a hamfest, a contest) kept for days, BLN1WX and the like a bulletin to a group, NWS-… weather alerts. Nobody acknowledges them, so the sender repeats them; yours go out at once, then after 1, 5 and 10 min and every 20 min (an announcement every hour) until the time is up or you stop it. A new text with the same number replaces the old one.',
+  telTitle: 'Station telemetry', telVia: 'Send telemetry', telOff: 'Off', telInternet: 'Over the internet', telRadio: 'By radio', telBoth: 'By radio and internet', telMinutes: 'Every', telGraphs: 'Graphs on aprs.fi',
+  telHint: 'For a digipeater or an iGate: every interval five numbers go out – packets heard by radio, digipeated, gated radio → internet and internet → radio, and the farthest station heard directly (without a digipeater) in km – and aprs.fi draws graphs of them. Over the internet it costs nothing on the air.',
   privTitle: 'Position privacy', privAmbiguity: 'How exact my position goes out', privExact: 'Exact',
   privAbout: 'Less exact – about {dist}', privMotion: 'Send speed and course', privAltitude: 'Send altitude',
   privHint: 'Less exact: the last digits of the position are left out (APRS position ambiguity), maps show only the square you are in. It applies to the beacon and the position button. EMERGENCY always goes exact, with speed and altitude – help has to find you.',
@@ -125,6 +127,8 @@ Object.assign(TEXTS.cs, {
   blnDelete: 'Smazat', blnSent: 'odesláno {n}×', blnNext: 'další za {m} min', blnUntil: 'do {t}', blnTimes: 'slyšeno {n}×', blnNewTag: 'NOVÉ',
   blnAnn: 'oznámení', blnRadio: 'rádiem', blnNet: 'internet',
   blnAbout: 'Bulletiny jsou APRS zprávy pro všechny: BLN0–BLN9 novinky na pár hodin (dnešní kroužek, nefunkční převaděč), BLNA–BLNZ oznámení akcí (setkání, závod) platná i několik dní, BLN1WX a podobné bulletin pro skupinu, NWS-… meteorologické výstrahy. Nikdo je nepotvrzuje, proto je odesílatel opakuje; tvoje odejdou hned, pak po 1, 5 a 10 min a dál každých 20 min (oznámení jednou za hodinu), dokud čas nevyprší nebo je nezastavíš. Nový text se stejným číslem nahradí starý.',
+  telTitle: 'Telemetrie stanice', telVia: 'Posílat telemetrii', telOff: 'Vypnuto', telInternet: 'Internetem', telRadio: 'Rádiem', telBoth: 'Rádiem i internetem', telMinutes: 'Každých', telGraphs: 'Grafy na aprs.fi',
+  telHint: 'Pro digipeater nebo iGate: každý interval odejde pět čísel – pakety přijaté rádiem, přeposlané digipeaterem, poslané z rádia na internet a z internetu do rádia a nejvzdálenější stanice slyšená přímo (bez digipeateru) v km – a aprs.fi z nich kreslí grafy. Přes internet to v éteru nic nestojí.',
   privTitle: 'Soukromí polohy', privAmbiguity: 'Jak přesně posílat moji polohu', privExact: 'Přesně',
   privAbout: 'Méně přesně – asi {dist}', privMotion: 'Posílat rychlost a směr', privAltitude: 'Posílat nadmořskou výšku',
   privHint: 'Méně přesně: poslední číslice polohy se vynechají (APRS position ambiguity), mapy ukážou jen čtverec, ve kterém jsi. Platí pro maják i tlačítko polohy. NOUZE jde vždy přesně, s rychlostí i výškou – pomoc tě musí najít.',
@@ -781,6 +785,13 @@ class AprsKissPanel extends HTMLElement {
           <label class="field">${t.digiAliases}<input class="f-digi-alias" value="${esc(st.digi_aliases || '')}" placeholder="RELAY" style="text-transform:uppercase"></label>
           <div class="hint">${t.digiHint}${this._extra?.digipeated ? ` · ${t.digipeated}: ${this._extra.digipeated}` : ''}</div>
         </div>
+        <div class="card"><h2>${t.telTitle}</h2>
+          <label class="field">${t.telVia}
+            <select class="f-tel">${[['', t.telOff], ['internet', t.telInternet], ['radio', t.telRadio], ['both', t.telBoth]].map(([v, l]) => `<option value="${v}" ${(st.telemetry_via || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+          <label class="field">${t.telMinutes}
+            <select class="f-tel-min">${[10, 20, 30, 60].map(v => `<option value="${v}" ${(st.telemetry_minutes || 20) === v ? 'selected' : ''}>${v} min</option>`).join('')}</select></label>
+          <div class="hint">${t.telHint}${st.callsign ? ` <a href="https://aprs.fi/telemetry/a/${esc(st.callsign)}" target="_blank" rel="noopener">${t.telGraphs}</a>` : ''}</div>
+        </div>
         <div class="card"><h2>${t.gps}</h2>
           <label class="field">${t.gpsSource}
             <select class="f-gps"><option value="manual" ${st.gps_source !== 'usb' ? 'selected' : ''}>${t.gpsHome}</option>
@@ -874,6 +885,7 @@ class AprsKissPanel extends HTMLElement {
         aprsis_passcode: q('.f-pass').value.trim(), aprsis_radius_km: Number(q('.f-radius').value) || 0,
         igate_rx: q('.f-irx').checked, igate_tx: q('.f-itx').checked,
         position_ambiguity: Number(q('.f-amb').value) || 0, send_motion: q('.f-motion').checked, send_altitude: q('.f-alt').checked,
+        telemetry_via: q('.f-tel').value, telemetry_minutes: Number(q('.f-tel-min').value) || 20,
         digi_mode: q('.f-digi').value, digi_max_hops: Number(q('.f-digi-hops').value) || 2, digi_aliases: q('.f-digi-alias').value.trim().toUpperCase(),
         gps_source: q('.f-gps').value, gps_device: q('.f-gps').value === 'usb' ? q('.f-gps-device').value : (st.gps_device || ''),
         gps_baudrate: Number(q('.f-gps-baud').value) || 0,

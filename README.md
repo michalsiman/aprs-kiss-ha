@@ -7,6 +7,7 @@ A Home Assistant integration that turns a radio with a **KISS TNC** into an **AP
 - **Chat**: a plain chat window. Type and press Enter: the text goes out to everyone on the frequency as it is, and everything typed by others appears below. It is plain packet chat, nothing of APRS.
 - **Monitor**: every frame heard and sent, in the classic TNC monitor format; with APRS-IS on, its packets too, marked `[IS]`.
 - **APRS-IS and iGate**: connect to the APRS internet network; gate what the radio hears to the internet, and internet messages for local stations to the radio; messages to you from the internet arrive in Home Assistant too.
+- **Station telemetry**: a digipeater's or iGate's numbers (packets heard, digipeated, gated both ways, the farthest station heard directly) every 10–60 minutes as APRS telemetry – aprs.fi draws graphs of them.
 - Home Assistant **entities, services and events**, so automations can react to APRS messages or send them.
 
 [![Open aprs-kiss-ha in the Home Assistant Marketplace](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=michalsiman&repository=aprs-kiss-ha&category=integration)

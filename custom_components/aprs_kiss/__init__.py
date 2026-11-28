@@ -221,6 +221,8 @@ SETTINGS_KEYS = {
     "bbs_ssid": int, "tak_callsign": str, "tak_team": str, "tak_role": str, "tak_interval_min": int,
     # position privacy: a less exact position (0 exact … 4 about 110 km), speed and course, altitude
     "position_ambiguity": int, "send_motion": bool, "send_altitude": bool,
+    # station telemetry: "" off, "internet", "radio", "both"; every 10, 20, 30 or 60 minutes
+    "telemetry_via": str, "telemetry_minutes": int,
 }
 
 
@@ -276,6 +278,10 @@ async def ws_set_settings(hass, connection, msg):
             raise ValueError("digi_mode")
         if not 0 <= new.get("position_ambiguity", 0) <= 4:
             raise ValueError("position_ambiguity")
+        if new.get("telemetry_via", "") not in ("", "internet", "radio", "both"):
+            raise ValueError("telemetry_via")
+        if new.get("telemetry_minutes", 20) not in (10, 20, 30, 60):
+            raise ValueError("telemetry_minutes")
         if new.get("gps_source", "manual") not in ("manual", "usb"):
             raise ValueError("gps_source")
         if new.get("gps_source") == "usb" and not new.get("gps_device"):

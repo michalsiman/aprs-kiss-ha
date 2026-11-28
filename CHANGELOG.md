@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.5.0] - 2026-11-28
+
+- **Station telemetry** (a card in Settings): for a digipeater or an iGate, every 10, 20, 30 or 60 minutes the packets heard by radio, digipeated, gated radio → internet and internet → radio, and the farthest station heard directly (without a digipeater) in km – plus digipeater, iGate, APRS-IS and Transmit on/off – as APRS telemetry over the internet, by radio or both. aprs.fi draws graphs of them (a link in the card).
+- Core synced with the app's 1.10.0.
+
 ## [0.4.0] - 2026-11-27
 
 - **The same engine as the APRS & Packet app** (copied into `core/` by `tools/sync_core.py`), so fixes and new features come to both. The message history moves from Home Assistant's storage to `/config/aprs_kiss/state.json` by itself.
